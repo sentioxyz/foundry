@@ -60,7 +60,7 @@ pub struct CompilationRestrictions {
 
 impl From<CompilationRestrictions> for RestrictionsWithVersion<MultiCompilerRestrictions> {
     fn from(value: CompilationRestrictions) -> Self {
-        RestrictionsWithVersion {
+        Self {
             restrictions: MultiCompilerRestrictions {
                 solc: SolcRestrictions {
                     evm_version: value.evm_version,
