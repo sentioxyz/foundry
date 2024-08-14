@@ -72,7 +72,7 @@ impl BindJsonArgs {
         // We only generate bindings for a single Solidity version to avoid conflicts.
         let mut sources = graph
             // resolve graph into mapping language -> version -> sources
-            .into_sources_by_version(project.offline, &project.locked_versions, &project.compiler)?
+            .into_sources_by_version(&project)?
             .0
             .into_iter()
             // we are only interested in Solidity sources
@@ -81,7 +81,7 @@ impl BindJsonArgs {
             .1
             .into_iter()
             // For now, we are always picking the latest version.
-            .max_by(|(v1, _), (v2, _)| v1.cmp(v2))
+            .max_by(|(v1, _, _), (v2, _, _)| v1.cmp(v2))
             .unwrap()
             .1;
 
