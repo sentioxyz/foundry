@@ -458,7 +458,7 @@ pub struct Config {
 
     /// Additional settings profiles to use when compiling.
     #[serde(default)]
-    pub additional_compiler_profiles: BTreeMap<String, SettingsOverrides>,
+    pub additional_compiler_profiles: Vec<SettingsOverrides>,
 
     /// Restrictions on compilation of certain files.
     #[serde(default)]
@@ -836,10 +836,10 @@ impl Config {
     ) -> BTreeMap<String, MultiCompilerSettings> {
         let mut map = BTreeMap::new();
 
-        for (name, profile) in &self.additional_compiler_profiles {
+        for profile in &self.additional_compiler_profiles {
             let mut settings = base.clone();
             profile.apply(&mut settings);
-            map.insert(name.clone(), settings);
+            map.insert(profile.name.clone(), settings);
         }
 
         map
@@ -2205,7 +2205,7 @@ impl Default for Config {
             warnings: vec![],
             extra_args: vec![],
             eof_version: None,
-            additional_compiler_profiles: Default::default(),
+            additional_compiler_profiles: vec![],
             compilation_restrictions: vec![],
             _non_exhaustive: (),
         }

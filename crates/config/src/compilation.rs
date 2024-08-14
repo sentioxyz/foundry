@@ -13,6 +13,7 @@ use serde::{Deserialize, Serialize};
 /// settings profile.
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 pub struct SettingsOverrides {
+    pub name: String,
     via_ir: Option<bool>,
     #[serde(default, with = "serde_helpers::display_from_str_opt")]
     evm_version: Option<EvmVersion>,
