@@ -31,7 +31,7 @@ impl Eip712Args {
         let config = self.try_load_config_emit_warnings()?;
         let mut project = config.create_project(false, true)?;
         let target_path = dunce::canonicalize(self.target_path)?;
-        project.settings.update_output_selection(|selection| {
+        project.update_output_selection(|selection| {
             *selection = OutputSelection::ast_output_selection();
         });
 

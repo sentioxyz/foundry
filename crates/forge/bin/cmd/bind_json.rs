@@ -229,7 +229,7 @@ impl PreprocessedState {
     fn compile(self) -> Result<CompiledState> {
         let Self { sources, target_path, mut project, config } = self;
 
-        project.settings.update_output_selection(|selection| {
+        project.update_output_selection(|selection| {
             *selection = OutputSelection::ast_output_selection();
         });
 

@@ -3726,8 +3726,8 @@ dependencies = [
 
 [[package]]
 name = "foundry-compilers"
-version = "0.10.2"
-source = "git+https://github.com/foundry-rs/compilers?rev=b9e5f7f#b9e5f7fb06aa8cb542d6706ff2e766a493155134"
+version = "0.10.3"
+source = "git+https://github.com/foundry-rs/compilers?rev=9b13ed2#9b13ed216987d477b3d58463973331756c4075ab"
 dependencies = [
  "alloy-json-abi",
  "alloy-primitives",
@@ -3763,8 +3763,8 @@ dependencies = [
 
 [[package]]
 name = "foundry-compilers-artifacts"
-version = "0.10.2"
-source = "git+https://github.com/foundry-rs/compilers?rev=b9e5f7f#b9e5f7fb06aa8cb542d6706ff2e766a493155134"
+version = "0.10.3"
+source = "git+https://github.com/foundry-rs/compilers?rev=9b13ed2#9b13ed216987d477b3d58463973331756c4075ab"
 dependencies = [
  "foundry-compilers-artifacts-solc",
  "foundry-compilers-artifacts-vyper",
@@ -3772,8 +3772,8 @@ dependencies = [
 
 [[package]]
 name = "foundry-compilers-artifacts-solc"
-version = "0.10.2"
-source = "git+https://github.com/foundry-rs/compilers?rev=b9e5f7f#b9e5f7fb06aa8cb542d6706ff2e766a493155134"
+version = "0.10.3"
+source = "git+https://github.com/foundry-rs/compilers?rev=9b13ed2#9b13ed216987d477b3d58463973331756c4075ab"
 dependencies = [
  "alloy-json-abi",
  "alloy-primitives",
@@ -3795,8 +3795,8 @@ dependencies = [
 
 [[package]]
 name = "foundry-compilers-artifacts-vyper"
-version = "0.10.2"
-source = "git+https://github.com/foundry-rs/compilers?rev=b9e5f7f#b9e5f7fb06aa8cb542d6706ff2e766a493155134"
+version = "0.10.3"
+source = "git+https://github.com/foundry-rs/compilers?rev=9b13ed2#9b13ed216987d477b3d58463973331756c4075ab"
 dependencies = [
  "alloy-json-abi",
  "alloy-primitives",
@@ -3809,8 +3809,8 @@ dependencies = [
 
 [[package]]
 name = "foundry-compilers-core"
-version = "0.10.2"
-source = "git+https://github.com/foundry-rs/compilers?rev=b9e5f7f#b9e5f7fb06aa8cb542d6706ff2e766a493155134"
+version = "0.10.3"
+source = "git+https://github.com/foundry-rs/compilers?rev=9b13ed2#9b13ed216987d477b3d58463973331756c4075ab"
 dependencies = [
  "alloy-primitives",
  "cfg-if",

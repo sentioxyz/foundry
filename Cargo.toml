@@ -266,4 +266,4 @@ proptest = "1"
 comfy-table = "7"
 
 [patch.crates-io]
-foundry-compilers = { git = "https://github.com/foundry-rs/compilers", rev = "b9e5f7f" }
+foundry-compilers = { git = "https://github.com/foundry-rs/compilers", rev = "9b13ed2" }
