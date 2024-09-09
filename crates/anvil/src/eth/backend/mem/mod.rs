@@ -86,20 +86,21 @@ use foundry_evm::{
 };
 use futures::channel::mpsc::{unbounded, UnboundedSender};
 use parking_lot::{Mutex, RwLock};
-use revm::{
-    db::WrapDatabaseRef,
-    primitives::{
-        calc_blob_gasprice, BlobExcessGasAndPrice, HashMap, OptimismFields, ResultAndState,
-    },
-};
+use revm::{db::WrapDatabaseRef, primitives::{
+    calc_blob_gasprice, BlobExcessGasAndPrice, HashMap, OptimismFields, ResultAndState,
+}, Database};
 use std::{
     collections::BTreeMap,
     io::{Read, Write},
     sync::Arc,
     time::Duration,
 };
+use std::hash::Hash;
+use alloy_rpc_types::trace::geth::sentio::SentioReceipt;
 use storage::{Blockchain, MinedTransaction, DEFAULT_HISTORY_LIMIT};
 use tokio::sync::RwLock as AsyncRwLock;
+use foundry_evm::inspectors::TracingInspector;
+use foundry_evm::traces::SentioTraceBuilder;
 
 pub mod cache;
 pub mod fork_db;
@@ -1314,6 +1315,41 @@ impl Backend {
                         GethDebugBuiltInTracerType::PreStateTracer |
                         GethDebugBuiltInTracerType::MuxTracer => {
                             Err(RpcError::invalid_params("unsupported tracer type").into())
+                        }
+                        GethDebugBuiltInTracerType::SentioTracer => {
+                            let sentio_tracer_config = tracer_config
+                                .into_sentio_config()
+                                .map_err(|e| (RpcError::invalid_params(e.to_string())))?;
+
+                            let inspector_cfg = TracingInspectorConfig::default_geth().set_record_logs(true).set_memory_snapshots(true);
+                            let mut inspector = self.build_inspector().with_tracing_config(inspector_cfg);
+
+                            let env = self.build_call_env(request, fee_details, block);
+                            let mut evm =
+                                self.new_evm_with_inspector_ref(state, env, &mut inspector);
+                            let ResultAndState { result, state: _ } = evm.transact()?;
+
+                            let bn = block_number.to::<u64>();
+                            let block_hash = evm.db_mut().block_hash(bn)?;
+                            let nonce = evm.tx().nonce.unwrap_or(0);
+                            let gas_price = evm.tx().gas_price;
+
+                            let receipt = SentioReceipt {
+                                nonce: Some(nonce),
+                                block_number: Some(bn),
+                                block_hash: Some(block_hash),
+                                gas_price: Some(gas_price),
+                                transaction_index: Some(0),
+                                tx_hash: None,
+                            };
+                            let gas_used = result.gas_used();
+
+                            drop(evm);
+                            let tracing_inspector = inspector.tracer.expect("tracer disappeared");
+
+                            Ok(SentioTraceBuilder::new(tracing_inspector.into_traces().into_nodes(), sentio_tracer_config, inspector_cfg)
+                                .sentio_traces(gas_used, Some(receipt))
+                                .into())
                         }
                     },
 

@@ -27,7 +27,7 @@ use anvil_rpc::error::RpcError;
 use foundry_evm::{
     revm::primitives::Env,
     traces::{
-        CallKind, FourByteInspector, GethTraceBuilder, ParityTraceBuilder, TracingInspectorConfig,
+        CallKind, FourByteInspector, GethTraceBuilder, ParityTraceBuilder, SentioTraceBuilder, TracingInspectorConfig,
     },
 };
 use parking_lot::RwLock;
@@ -37,7 +37,8 @@ use std::{
     sync::Arc,
     time::Duration,
 };
-
+use alloy_rpc_types::trace::geth::sentio::SentioReceipt;
+use revm::primitives::bitvec::macros::internal::funty::Fundamental;
 // === various limits in number of blocks ===
 
 pub const DEFAULT_HISTORY_LIMIT: usize = 500;
@@ -510,6 +511,25 @@ impl MinedTransaction {
                     GethDebugBuiltInTracerType::PreStateTracer |
                     GethDebugBuiltInTracerType::NoopTracer |
                     GethDebugBuiltInTracerType::MuxTracer => {}
+                    GethDebugBuiltInTracerType::SentioTracer => {
+                        return match tracer_config.into_sentio_config() {
+                            Ok(sentio_tracer_config) => Ok(SentioTraceBuilder::new(
+                                self.info.traces.clone(),
+                                sentio_tracer_config,
+                                TracingInspectorConfig::default_geth(),
+                            )
+                                .sentio_traces(self.info.gas_used.as_u64(), Some(SentioReceipt {
+                                    nonce: Some(self.info.nonce),
+                                    tx_hash: Some(self.info.transaction_hash),
+                                    block_number: Some(self.block_number),
+                                    block_hash: Some(self.block_hash),
+                                    transaction_index: Some(self.info.transaction_index),
+                                    gas_price: Some(U256::ZERO), // TODO
+                                }))
+                                .into()),
+                            Err(e) => Err(RpcError::invalid_params(e.to_string()).into()),
+                        }
+                    }
                 },
                 GethDebugTracerType::JsTracer(_code) => {}
             }

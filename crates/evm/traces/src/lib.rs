@@ -26,7 +26,7 @@ pub use revm_inspectors::tracing::{
         CallKind, CallLog, CallTrace, CallTraceNode, DecodedCallData, DecodedCallLog,
         DecodedCallTrace,
     },
-    CallTraceArena, FourByteInspector, GethTraceBuilder, ParityTraceBuilder, StackSnapshotType,
+    CallTraceArena, FourByteInspector, GethTraceBuilder, ParityTraceBuilder, SentioTraceBuilder, StackSnapshotType,
     TraceWriter, TracingInspector, TracingInspectorConfig,
 };
 
