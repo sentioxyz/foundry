@@ -352,6 +352,7 @@ impl EthApi {
                 self.anvil_set_next_block_base_fee_per_gas(gas).await.to_rpc_result()
             }
             EthRequest::DumpState(_) => self.anvil_dump_state().await.to_rpc_result(),
+            EthRequest::DumpStateJson(_) => self.anvil_dump_state_json().await.to_rpc_result(),
             EthRequest::LoadState(buf) => self.anvil_load_state(buf).await.to_rpc_result(),
             EthRequest::NodeInfo(_) => self.anvil_node_info().await.to_rpc_result(),
             EthRequest::AnvilMetadata(_) => self.anvil_metadata().await.to_rpc_result(),
@@ -1842,6 +1843,19 @@ impl EthApi {
     pub async fn anvil_dump_state(&self) -> Result<Bytes> {
         node_info!("anvil_dumpState");
         self.backend.dump_state().await
+    }
+
+    pub async fn anvil_dump_state_json(&self) -> Result<SerializableState> {
+        node_info!("anvil_dumpStateJson");
+        match self.serialized_state().await {
+            Ok(mut state) => {
+                state.transactions.iter_mut().for_each(|tx| {
+                    tx.info.traces = vec![];
+                });
+                Ok(state)
+            }
+            Err(e) => { Err(e) }
+        }
     }
 
     /// Returns the current state

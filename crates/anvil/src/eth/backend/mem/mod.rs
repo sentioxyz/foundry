@@ -95,11 +95,9 @@ use std::{
     sync::Arc,
     time::Duration,
 };
-use std::hash::Hash;
 use alloy_rpc_types::trace::geth::sentio::SentioReceipt;
 use storage::{Blockchain, MinedTransaction, DEFAULT_HISTORY_LIMIT};
 use tokio::sync::RwLock as AsyncRwLock;
-use foundry_evm::inspectors::TracingInspector;
 use foundry_evm::traces::SentioTraceBuilder;
 
 pub mod cache;
@@ -1336,7 +1334,7 @@ impl Backend {
 
                             let receipt = SentioReceipt {
                                 nonce: Some(nonce),
-                                block_number: Some(bn),
+                                block_number: Some(U64::from(bn)),
                                 block_hash: Some(block_hash),
                                 gas_price: Some(gas_price),
                                 transaction_index: Some(0),
@@ -2141,7 +2139,6 @@ impl Backend {
             let number = self.convert_block_number(
                 receipt.clone().and_then(|r| r.block_number).map(BlockNumber::from),
             );
-
             if fork.predates_fork_inclusive(number) {
                 return Ok(receipt);
             }

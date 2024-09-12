@@ -529,6 +529,12 @@ pub enum EthRequest {
     )]
     DumpState(()),
 
+    #[cfg_attr(
+        feature = "serde",
+        serde(rename = "anvil_dumpStateJson", with = "empty_params")
+    )]
+    DumpStateJson(()),
+
     /// Adds state previously dumped with `DumpState` to the current chain
     #[cfg_attr(
         feature = "serde",

@@ -28,6 +28,7 @@ use parking_lot::{
 };
 use revm::primitives::BlobExcessGasAndPrice;
 use std::{collections::HashMap, sync::Arc, time::Duration};
+use alloy_rpc_types::trace::geth::{GethDebugBuiltInTracerType, GethDebugTracerType};
 use tokio::sync::RwLock as AsyncRwLock;
 
 /// Represents a fork of a remote client
@@ -361,14 +362,24 @@ impl ClientFork {
         hash: B256,
         opts: GethDebugTracingOptions,
     ) -> Result<GethTrace, TransportError> {
-        if let Some(traces) = self.storage_read().geth_transaction_traces.get(&hash).cloned() {
+        let tracer_type: Option<GethDebugBuiltInTracerType> = if let Some(tracer) = opts.clone().tracer {
+            if let GethDebugTracerType::BuiltInTracer(builtin_tracer) = tracer {
+                Some(builtin_tracer)
+            } else {
+                None
+            }
+        } else {
+            None
+        };
+        let key = (hash.clone(), tracer_type);
+        if let Some(traces) = self.storage_read().geth_transaction_traces.get(&key).cloned() {
             return Ok(traces);
         }
 
         let trace = self.provider().debug_trace_transaction(hash, opts).await?;
 
         let mut storage = self.storage_write();
-        storage.geth_transaction_traces.insert(hash, trace.clone());
+        storage.geth_transaction_traces.insert(key, trace.clone());
 
         Ok(trace)
     }
@@ -682,7 +693,7 @@ pub struct ForkedStorage {
     pub transaction_receipts: HashMap<B256, ReceiptResponse>,
     pub transaction_traces: HashMap<B256, Vec<Trace>>,
     pub logs: HashMap<Filter, Vec<Log>>,
-    pub geth_transaction_traces: HashMap<B256, GethTrace>,
+    pub geth_transaction_traces: HashMap<(B256, Option<GethDebugBuiltInTracerType>), GethTrace>,
     pub block_traces: HashMap<u64, Vec<Trace>>,
     pub block_receipts: HashMap<u64, Vec<ReceiptResponse>>,
     pub code_at: HashMap<(Address, u64), Bytes>,

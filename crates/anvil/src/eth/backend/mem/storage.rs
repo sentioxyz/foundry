@@ -521,7 +521,7 @@ impl MinedTransaction {
                                 .sentio_traces(self.info.gas_used.as_u64(), Some(SentioReceipt {
                                     nonce: Some(self.info.nonce),
                                     tx_hash: Some(self.info.transaction_hash),
-                                    block_number: Some(self.block_number),
+                                    block_number: Some(U64::from(self.block_number)),
                                     block_hash: Some(self.block_hash),
                                     transaction_index: Some(self.info.transaction_index),
                                     gas_price: Some(U256::ZERO), // TODO
