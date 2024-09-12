@@ -362,24 +362,25 @@ impl ClientFork {
         hash: B256,
         opts: GethDebugTracingOptions,
     ) -> Result<GethTrace, TransportError> {
-        let tracer_type: Option<GethDebugBuiltInTracerType> = if let Some(tracer) = opts.clone().tracer {
-            if let GethDebugTracerType::BuiltInTracer(builtin_tracer) = tracer {
-                Some(builtin_tracer)
-            } else {
-                None
-            }
-        } else {
-            None
-        };
-        let key = (hash.clone(), tracer_type);
-        if let Some(traces) = self.storage_read().geth_transaction_traces.get(&key).cloned() {
-            return Ok(traces);
-        }
+        // FIXME disable this since tracer configs can be different
+        // let tracer_type: Option<GethDebugBuiltInTracerType> = if let Some(tracer) = opts.clone().tracer {
+        //     if let GethDebugTracerType::BuiltInTracer(builtin_tracer) = tracer {
+        //         Some(builtin_tracer)
+        //     } else {
+        //         None
+        //     }
+        // } else {
+        //     None
+        // };
+        // let key = (hash.clone(), tracer_type);
+        // if let Some(traces) = self.storage_read().geth_transaction_traces.get(&key).cloned() {
+        //     return Ok(traces);
+        // }
 
         let trace = self.provider().debug_trace_transaction(hash, opts).await?;
 
-        let mut storage = self.storage_write();
-        storage.geth_transaction_traces.insert(key, trace.clone());
+        // let mut storage = self.storage_write();
+        // storage.geth_transaction_traces.insert(key, trace.clone());
 
         Ok(trace)
     }
