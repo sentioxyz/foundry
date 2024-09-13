@@ -30,6 +30,7 @@ use self::serde_helpers::*;
 use foundry_common::serde_helpers::{
     deserialize_number, deserialize_number_opt, deserialize_number_seq,
 };
+use crate::types::{TraceCallManyBundle, TraceCallManyContext};
 
 /// Wrapper type that ensures the type is named `params`
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -303,6 +304,13 @@ pub enum EthRequest {
     DebugTraceCall(
         WithOtherFields<TransactionRequest>,
         #[cfg_attr(feature = "serde", serde(default))] Option<BlockId>,
+        #[cfg_attr(feature = "serde", serde(default))] GethDebugTracingCallOptions,
+    ),
+
+    #[cfg_attr(feature = "serde", serde(rename = "debug_traceCallMany"))]
+    DebugTraceCallMany(
+        Vec<TraceCallManyBundle>,
+        TraceCallManyContext,
         #[cfg_attr(feature = "serde", serde(default))] GethDebugTracingCallOptions,
     ),
 

@@ -28,7 +28,7 @@ use parking_lot::{
 };
 use revm::primitives::BlobExcessGasAndPrice;
 use std::{collections::HashMap, sync::Arc, time::Duration};
-use alloy_rpc_types::trace::geth::{GethDebugBuiltInTracerType, GethDebugTracerType};
+use alloy_rpc_types::trace::geth::{GethDebugBuiltInTracerType};
 use tokio::sync::RwLock as AsyncRwLock;
 
 /// Represents a fork of a remote client

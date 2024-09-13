@@ -85,6 +85,7 @@ use std::{
     sync::Arc,
     time::Duration,
 };
+use anvil_core::types::{TraceCallManyBundle, TraceCallManyContext};
 
 /// The client version: `anvil/v{major}.{minor}.{patch}`
 pub const CLIENT_VERSION: &str = concat!("anvil/v", env!("CARGO_PKG_VERSION"));
@@ -298,6 +299,9 @@ impl EthApi {
             // non eth-standard rpc calls
             EthRequest::DebugTraceCall(tx, block, opts) => {
                 self.debug_trace_call(tx, block, opts).await.to_rpc_result()
+            }
+            EthRequest::DebugTraceCallMany(bundle, context, opts) => {
+                self.debug_trace_call_many(bundle, context, opts).await.to_rpc_result()
             }
             EthRequest::TraceTransaction(tx) => self.trace_transaction(tx).await.to_rpc_result(),
             EthRequest::TraceBlock(block) => self.trace_block(block).await.to_rpc_result(),
@@ -1577,6 +1581,19 @@ impl EthApi {
 
         let result: std::result::Result<GethTrace, BlockchainError> =
             self.backend.call_with_tracing(request, fees, Some(block_request), opts).await;
+        result
+    }
+
+    pub async fn debug_trace_call_many(
+        &self,
+        bundles: Vec<TraceCallManyBundle>,
+        context: TraceCallManyContext,
+        opts: GethDebugTracingCallOptions,
+    ) -> Result<Vec<Vec<Option<GethTrace>>>> {
+        node_info!("debug_traceCallMany");
+        let block_request = self.block_request(context.block_number).await?;
+        let result: std::result::Result<Vec<Vec<Option<GethTrace>>>, BlockchainError> =
+            self.backend.call_many_with_tracing(bundles, Some(block_request), context.transaction_index, opts).await;
         result
     }
 

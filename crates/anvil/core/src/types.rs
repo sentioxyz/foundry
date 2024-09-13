@@ -1,7 +1,9 @@
+use alloy_eips::BlockId;
 use alloy_primitives::{Bytes, B256, U256};
 
-use alloy_rpc_types::TransactionRequest;
-use serde::Deserialize;
+use alloy_rpc_types::{BlockOverrides, TransactionIndex, TransactionRequest};
+use alloy_serde::WithOtherFields;
+use serde::{Deserialize, Serialize};
 #[cfg(feature = "serde")]
 use serde::Serializer;
 
@@ -43,4 +45,19 @@ pub struct ReorgOptions {
 pub enum TransactionData {
     JSON(TransactionRequest),
     Raw(Bytes),
+}
+
+#[derive(Clone, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct TraceCallManyBundle {
+    pub transactions: Vec<WithOtherFields<TransactionRequest>>,
+    pub block_override: Option<BlockOverrides>
+}
+
+#[derive(Clone, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct TraceCallManyContext {
+    pub block_number: Option<BlockId>,
+    #[serde(default)]
+    pub transaction_index: TransactionIndex
 }
