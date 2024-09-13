@@ -55,6 +55,7 @@ use anvil_core::eth::{
 };
 use anvil_rpc::error::RpcError;
 
+use itertools::Itertools;
 use alloy_chains::NamedChain;
 use flate2::{read::GzDecoder, write::GzEncoder, Compression};
 use foundry_evm::{
@@ -86,9 +87,10 @@ use std::{
     time::Duration,
 };
 use alloy_rpc_types::trace::geth::sentio::SentioReceipt;
+use revm::db::DbAccount;
 use storage::{Blockchain, MinedTransaction, DEFAULT_HISTORY_LIMIT};
 use tokio::sync::RwLock as AsyncRwLock;
-use anvil_core::types::{TraceCallManyBundle};
+use anvil_core::types::{StorageEntry, StorageMap, StorageRangeAtResult, TraceCallManyBundle};
 use foundry_evm::traces::SentioTraceBuilder;
 
 pub mod cache;
@@ -2087,6 +2089,49 @@ impl Backend {
             Ok(val.into())
         })
         .await?
+    }
+
+    pub async fn storage_range_at(
+        &self,
+        // not supported for now, ignored
+        _: TransactionIndex,
+        contract_address: Address,
+        key_start: U256,
+        max_result: usize,
+        block_request: Option<BlockRequest>,
+    ) -> Result<StorageRangeAtResult, BlockchainError> {
+        self.with_database_at(block_request, |db, _| {
+            let db: Option<&HashMap<Address, DbAccount>> = db.maybe_as_full_db();
+            let mut storage_map: StorageMap = StorageMap::new();
+            let mut next_key: Option<B256> = None;
+
+            if let Some(db) = db {
+                if let Some(account) = db.get(&contract_address) {
+                    for key in account.storage.keys().sorted() {
+                        let key_bytes = B256::from(key.to_be_bytes());
+                        let key_sha3 = keccak256(key_bytes);
+                        next_key = Some(key_bytes);
+                        if storage_map.len() >= max_result {
+                            break;
+                        }
+                        if *key >= key_start {
+                            let entry = StorageEntry {
+                                key: key_bytes,
+                                value: B256::from(account.storage[key].to_be_bytes())
+                            };
+                            storage_map.insert(key_sha3, entry);
+                            next_key = None;
+                        }
+                    }
+                }
+                Ok(StorageRangeAtResult {
+                    storage: storage_map,
+                    next_key
+                })
+            } else {
+                Err(BlockchainError::DataUnavailable)
+            }
+        }).await?
     }
 
     /// Returns the code of the address

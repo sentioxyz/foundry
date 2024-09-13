@@ -1,16 +1,9 @@
 use crate::{eth::subscription::SubscriptionId, types::ReorgOptions};
 use alloy_primitives::{Address, Bytes, TxHash, B256, B64, U256};
-use alloy_rpc_types::{
-    anvil::{Forking, MineOptions},
-    pubsub::{Params as SubscriptionParams, SubscriptionKind},
-    request::TransactionRequest,
-    state::StateOverride,
-    trace::{
-        filter::TraceFilter,
-        geth::{GethDebugTracingCallOptions, GethDebugTracingOptions},
-    },
-    BlockId, BlockNumberOrTag as BlockNumber, Filter, Index,
-};
+use alloy_rpc_types::{anvil::{Forking, MineOptions}, pubsub::{Params as SubscriptionParams, SubscriptionKind}, request::TransactionRequest, state::StateOverride, trace::{
+    filter::TraceFilter,
+    geth::{GethDebugTracingCallOptions, GethDebugTracingOptions},
+}, BlockId, BlockNumberOrTag as BlockNumber, Filter, Index, TransactionIndex};
 use alloy_serde::WithOtherFields;
 
 pub mod block;
@@ -92,6 +85,9 @@ pub enum EthRequest {
 
     #[cfg_attr(feature = "serde", serde(rename = "eth_getStorageAt"))]
     EthGetStorageAt(Address, U256, Option<BlockId>),
+
+    #[cfg_attr(feature = "serde", serde(rename = "debug_storageRangeAt"))]
+    DebugStorageRangeAt(BlockId, TransactionIndex, Address, U256, usize),
 
     #[cfg_attr(feature = "serde", serde(rename = "eth_getBlockByHash"))]
     EthGetBlockByHash(B256, bool),

@@ -1,3 +1,4 @@
+use std::collections::HashMap;
 use alloy_eips::BlockId;
 use alloy_primitives::{Bytes, B256, U256};
 
@@ -60,4 +61,20 @@ pub struct TraceCallManyContext {
     pub block_number: Option<BlockId>,
     #[serde(default)]
     pub transaction_index: TransactionIndex
+}
+
+#[derive(Clone, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct StorageRangeAtResult {
+    pub storage: StorageMap,
+    pub next_key: Option<B256>,
+}
+
+pub type StorageMap = HashMap<B256, StorageEntry>;
+
+#[derive(Clone, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct StorageEntry {
+    pub key: B256,
+    pub value: B256
 }

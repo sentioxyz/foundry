@@ -36,22 +36,13 @@ use alloy_dyn_abi::TypedData;
 use alloy_eips::eip2718::Encodable2718;
 use alloy_network::{eip2718::Decodable2718, BlockResponse};
 use alloy_primitives::{Address, Bytes, Parity, TxHash, TxKind, B256, B64, U256, U64};
-use alloy_rpc_types::{
-    anvil::{
-        ForkedNetwork, Forking, Metadata, MineOptions, NodeEnvironment, NodeForkConfig, NodeInfo,
-    },
-    request::TransactionRequest,
-    state::StateOverride,
-    trace::{
-        filter::TraceFilter,
-        geth::{GethDebugTracingCallOptions, GethDebugTracingOptions, GethTrace},
-        parity::LocalizedTransactionTrace,
-    },
-    txpool::{TxpoolContent, TxpoolInspect, TxpoolInspectSummary, TxpoolStatus},
-    AccessList, AccessListResult, AnyNetworkBlock, BlockId, BlockNumberOrTag as BlockNumber,
-    BlockTransactions, EIP1186AccountProofResponse, FeeHistory, Filter, FilteredParams, Index, Log,
-    Transaction,
-};
+use alloy_rpc_types::{anvil::{
+    ForkedNetwork, Forking, Metadata, MineOptions, NodeEnvironment, NodeForkConfig, NodeInfo,
+}, request::TransactionRequest, state::StateOverride, trace::{
+    filter::TraceFilter,
+    geth::{GethDebugTracingCallOptions, GethDebugTracingOptions, GethTrace},
+    parity::LocalizedTransactionTrace,
+}, txpool::{TxpoolContent, TxpoolInspect, TxpoolInspectSummary, TxpoolStatus}, AccessList, AccessListResult, AnyNetworkBlock, BlockId, BlockNumberOrTag as BlockNumber, BlockTransactions, EIP1186AccountProofResponse, FeeHistory, Filter, FilteredParams, Index, Log, Transaction, TransactionIndex};
 use alloy_serde::WithOtherFields;
 use alloy_signer::Signature;
 use alloy_transport::TransportErrorKind;
@@ -85,7 +76,7 @@ use std::{
     sync::Arc,
     time::Duration,
 };
-use anvil_core::types::{TraceCallManyBundle, TraceCallManyContext};
+use anvil_core::types::{StorageRangeAtResult, TraceCallManyBundle, TraceCallManyContext};
 
 /// The client version: `anvil/v{major}.{minor}.{patch}`
 pub const CLIENT_VERSION: &str = concat!("anvil/v", env!("CARGO_PKG_VERSION"));
@@ -185,6 +176,9 @@ impl EthApi {
             EthRequest::EthBlockNumber(_) => self.block_number().to_rpc_result(),
             EthRequest::EthGetStorageAt(addr, slot, block) => {
                 self.storage_at(addr, slot, block).await.to_rpc_result()
+            }
+            EthRequest::DebugStorageRangeAt(block_hash, tx_index, address, key_start, max_result) => {
+                self.debug_storage_range_at(block_hash, tx_index, address, key_start, max_result).await.to_rpc_result()
             }
             EthRequest::EthGetBlockByHash(hash, full) => {
                 if full {
@@ -721,6 +715,28 @@ impl EthApi {
         }
 
         self.backend.storage_at(address, index, Some(block_request)).await
+    }
+
+    pub async fn debug_storage_range_at(
+        &self,
+        block_hash: BlockId,
+        tx_index: TransactionIndex,
+        address: Address,
+        key_start: U256,
+        max_result: usize,
+    ) -> Result<StorageRangeAtResult> {
+        node_info!("debug_storageRangeAt");
+        let block_request = self.block_request(Some(block_hash)).await?;
+
+        // check if the number predates the fork, if in fork mode
+        if let BlockRequest::Number(number) = block_request {
+            if let Some(fork) = self.get_fork() {
+                if fork.predates_fork(number) {
+                    unimplemented!();
+                }
+            }
+        }
+        self.backend.storage_range_at(tx_index, address, key_start, max_result, Some(block_request)).await
     }
 
     /// Returns block with given hash.
