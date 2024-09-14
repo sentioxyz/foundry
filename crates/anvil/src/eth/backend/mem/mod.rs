@@ -91,7 +91,7 @@ use revm::db::DbAccount;
 use storage::{Blockchain, MinedTransaction, DEFAULT_HISTORY_LIMIT};
 use tokio::sync::RwLock as AsyncRwLock;
 use anvil_core::types::{StorageEntry, StorageMap, StorageRangeAtResult, TraceCallManyBundle};
-use foundry_evm::traces::SentioTraceBuilder;
+use foundry_evm::traces::{SentioPrestateTraceBuilder, SentioTraceBuilder};
 
 pub mod cache;
 pub mod fork_db;
@@ -1345,9 +1345,30 @@ impl Backend {
                             drop(evm);
                             let tracing_inspector = inspector.tracer.expect("tracer disappeared");
 
-                            Ok(SentioTraceBuilder::new(tracing_inspector.into_traces().into_nodes(), sentio_tracer_config, inspector_cfg)
+                            Ok(SentioTraceBuilder::new(tracing_inspector.into_traces().into_nodes(), sentio_tracer_config)
                                 .sentio_traces(gas_used, Some(receipt))
                                 .into())
+                        }
+                        GethDebugBuiltInTracerType::SentioPrestateTracer => {
+                            let sentio_prestate_tracer_config = tracer_config
+                                .into_sentio_prestate_config()
+                                .map_err(|e| (RpcError::invalid_params(e.to_string())))?;
+
+                            let inspector_cfg = TracingInspectorConfig::default_geth().set_record_logs(true).set_memory_snapshots(true);
+                            let mut inspector = self.build_inspector().with_tracing_config(inspector_cfg);
+
+                            let env = self.build_call_env(request, fee_details, block);
+                            let mut evm =
+                                self.new_evm_with_inspector_ref(&state, env, &mut inspector);
+                            let result_and_state = evm.transact()?;
+                            drop(evm);
+
+                            let tracing_inspector = inspector.tracer.expect("tracer disappeared");
+                            let trace = SentioPrestateTraceBuilder::new(tracing_inspector.into_traces().into_nodes(), sentio_prestate_tracer_config)
+                                .sentio_prestate_traces(&result_and_state, &state)?
+                                .into();
+
+                            Ok(trace)
                         }
                     },
 
@@ -1442,7 +1463,7 @@ impl Backend {
                                         TracingInspectorConfig::from_geth_call_config(&call_config),
                                     )
                                 }
-                                GethDebugBuiltInTracerType::SentioTracer => {
+                                GethDebugBuiltInTracerType::SentioTracer | GethDebugBuiltInTracerType::SentioPrestateTracer => {
                                     let inspector_cfg = TracingInspectorConfig::default_geth().set_record_logs(true).set_memory_snapshots(true);
                                     self.build_inspector().with_tracing_config(inspector_cfg)
                                 }
@@ -1475,7 +1496,7 @@ impl Backend {
 
                         (result, block_hash, nonce, gas_price)
                     };
-                    db.commit(state);
+                    db.commit(state.clone());
 
                     let (exit_reason, gas_used, out) = match result.clone() {
                         ExecutionResult::Success { reason, gas_used, output, .. } => {
@@ -1515,9 +1536,17 @@ impl Backend {
                                         tx_hash: None,
                                     };
                                     let gas_used = result.gas_used();
-                                    let inspector_cfg = TracingInspectorConfig::default_geth().set_record_logs(true).set_memory_snapshots(true);
-                                    Ok(SentioTraceBuilder::new(tracing_inspector.into_traces().into_nodes(), sentio_tracer_config, inspector_cfg)
+                                    Ok(SentioTraceBuilder::new(tracing_inspector.into_traces().into_nodes(), sentio_tracer_config)
                                         .sentio_traces(gas_used, Some(receipt))
+                                        .into())
+                                }
+                                GethDebugBuiltInTracerType::SentioPrestateTracer => {
+                                    let sentio_prestate_tracer_config = tracer_config.clone()
+                                        .into_sentio_prestate_config()
+                                        .map_err(|e| (RpcError::invalid_params(e.to_string())))?;
+
+                                    Ok(SentioPrestateTraceBuilder::new(tracing_inspector.into_traces().into_nodes(), sentio_prestate_tracer_config)
+                                        .sentio_prestate_traces(&ResultAndState { result, state }, &db)?
                                         .into())
                                 }
                                 _ => {

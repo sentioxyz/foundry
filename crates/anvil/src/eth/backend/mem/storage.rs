@@ -510,13 +510,12 @@ impl MinedTransaction {
                     }
                     GethDebugBuiltInTracerType::PreStateTracer |
                     GethDebugBuiltInTracerType::NoopTracer |
-                    GethDebugBuiltInTracerType::MuxTracer => {}
+                    GethDebugBuiltInTracerType::MuxTracer => { unimplemented!() }
                     GethDebugBuiltInTracerType::SentioTracer => {
                         return match tracer_config.into_sentio_config() {
                             Ok(sentio_tracer_config) => Ok(SentioTraceBuilder::new(
                                 self.info.traces.clone(),
                                 sentio_tracer_config,
-                                TracingInspectorConfig::default_geth(),
                             )
                                 .sentio_traces(self.info.gas_used.as_u64(), Some(SentioReceipt {
                                     nonce: Some(self.info.nonce),
@@ -530,6 +529,7 @@ impl MinedTransaction {
                             Err(e) => Err(RpcError::invalid_params(e.to_string()).into()),
                         }
                     }
+                    GethDebugBuiltInTracerType::SentioPrestateTracer => todo!()
                 },
                 GethDebugTracerType::JsTracer(_code) => {}
             }
