@@ -86,7 +86,7 @@ dependencies = [
 [[package]]
 name = "alloy-consensus"
 version = "0.3.1"
-source = "git+https://github.com/sentioxyz/alloy?rev=99d79ab#99d79ab576b7b4b9a96e8196796a558906f717ef"
+source = "git+https://github.com/sentioxyz/alloy?rev=b5ea51a#b5ea51ae9ef510a4cf7fc1f7c78872593ed658e4"
 dependencies = [
  "alloy-eips",
  "alloy-primitives",
@@ -99,7 +99,7 @@ dependencies = [
 [[package]]
 name = "alloy-contract"
 version = "0.3.1"
-source = "git+https://github.com/sentioxyz/alloy?rev=99d79ab#99d79ab576b7b4b9a96e8196796a558906f717ef"
+source = "git+https://github.com/sentioxyz/alloy?rev=b5ea51a#b5ea51ae9ef510a4cf7fc1f7c78872593ed658e4"
 dependencies = [
  "alloy-dyn-abi",
  "alloy-json-abi",
@@ -167,7 +167,7 @@ dependencies = [
 [[package]]
 name = "alloy-eips"
 version = "0.3.1"
-source = "git+https://github.com/sentioxyz/alloy?rev=99d79ab#99d79ab576b7b4b9a96e8196796a558906f717ef"
+source = "git+https://github.com/sentioxyz/alloy?rev=b5ea51a#b5ea51ae9ef510a4cf7fc1f7c78872593ed658e4"
 dependencies = [
  "alloy-eip2930",
  "alloy-eip7702",
@@ -185,7 +185,7 @@ dependencies = [
 [[package]]
 name = "alloy-genesis"
 version = "0.3.1"
-source = "git+https://github.com/sentioxyz/alloy?rev=99d79ab#99d79ab576b7b4b9a96e8196796a558906f717ef"
+source = "git+https://github.com/sentioxyz/alloy?rev=b5ea51a#b5ea51ae9ef510a4cf7fc1f7c78872593ed658e4"
 dependencies = [
  "alloy-primitives",
  "alloy-serde",
@@ -207,7 +207,7 @@ dependencies = [
 [[package]]
 name = "alloy-json-rpc"
 version = "0.3.1"
-source = "git+https://github.com/sentioxyz/alloy?rev=99d79ab#99d79ab576b7b4b9a96e8196796a558906f717ef"
+source = "git+https://github.com/sentioxyz/alloy?rev=b5ea51a#b5ea51ae9ef510a4cf7fc1f7c78872593ed658e4"
 dependencies = [
  "alloy-primitives",
  "alloy-sol-types",
@@ -220,7 +220,7 @@ dependencies = [
 [[package]]
 name = "alloy-network"
 version = "0.3.1"
-source = "git+https://github.com/sentioxyz/alloy?rev=99d79ab#99d79ab576b7b4b9a96e8196796a558906f717ef"
+source = "git+https://github.com/sentioxyz/alloy?rev=b5ea51a#b5ea51ae9ef510a4cf7fc1f7c78872593ed658e4"
 dependencies = [
  "alloy-consensus",
  "alloy-eips",
@@ -240,7 +240,7 @@ dependencies = [
 [[package]]
 name = "alloy-network-primitives"
 version = "0.3.1"
-source = "git+https://github.com/sentioxyz/alloy?rev=99d79ab#99d79ab576b7b4b9a96e8196796a558906f717ef"
+source = "git+https://github.com/sentioxyz/alloy?rev=b5ea51a#b5ea51ae9ef510a4cf7fc1f7c78872593ed658e4"
 dependencies = [
  "alloy-primitives",
  "alloy-serde",
@@ -276,7 +276,7 @@ dependencies = [
 [[package]]
 name = "alloy-provider"
 version = "0.3.1"
-source = "git+https://github.com/sentioxyz/alloy?rev=99d79ab#99d79ab576b7b4b9a96e8196796a558906f717ef"
+source = "git+https://github.com/sentioxyz/alloy?rev=b5ea51a#b5ea51ae9ef510a4cf7fc1f7c78872593ed658e4"
 dependencies = [
  "alloy-chains",
  "alloy-consensus",
@@ -314,7 +314,7 @@ dependencies = [
 [[package]]
 name = "alloy-pubsub"
 version = "0.3.1"
-source = "git+https://github.com/sentioxyz/alloy?rev=99d79ab#99d79ab576b7b4b9a96e8196796a558906f717ef"
+source = "git+https://github.com/sentioxyz/alloy?rev=b5ea51a#b5ea51ae9ef510a4cf7fc1f7c78872593ed658e4"
 dependencies = [
  "alloy-json-rpc",
  "alloy-primitives",
@@ -354,7 +354,7 @@ dependencies = [
 [[package]]
 name = "alloy-rpc-client"
 version = "0.3.1"
-source = "git+https://github.com/sentioxyz/alloy?rev=99d79ab#99d79ab576b7b4b9a96e8196796a558906f717ef"
+source = "git+https://github.com/sentioxyz/alloy?rev=b5ea51a#b5ea51ae9ef510a4cf7fc1f7c78872593ed658e4"
 dependencies = [
  "alloy-json-rpc",
  "alloy-primitives",
@@ -378,7 +378,7 @@ dependencies = [
 [[package]]
 name = "alloy-rpc-types"
 version = "0.3.1"
-source = "git+https://github.com/sentioxyz/alloy?rev=99d79ab#99d79ab576b7b4b9a96e8196796a558906f717ef"
+source = "git+https://github.com/sentioxyz/alloy?rev=b5ea51a#b5ea51ae9ef510a4cf7fc1f7c78872593ed658e4"
 dependencies = [
  "alloy-rpc-types-anvil",
  "alloy-rpc-types-engine",
@@ -392,7 +392,7 @@ dependencies = [
 [[package]]
 name = "alloy-rpc-types-anvil"
 version = "0.3.1"
-source = "git+https://github.com/sentioxyz/alloy?rev=99d79ab#99d79ab576b7b4b9a96e8196796a558906f717ef"
+source = "git+https://github.com/sentioxyz/alloy?rev=b5ea51a#b5ea51ae9ef510a4cf7fc1f7c78872593ed658e4"
 dependencies = [
  "alloy-primitives",
  "alloy-serde",
@@ -402,7 +402,7 @@ dependencies = [
 [[package]]
 name = "alloy-rpc-types-engine"
 version = "0.3.1"
-source = "git+https://github.com/sentioxyz/alloy?rev=99d79ab#99d79ab576b7b4b9a96e8196796a558906f717ef"
+source = "git+https://github.com/sentioxyz/alloy?rev=b5ea51a#b5ea51ae9ef510a4cf7fc1f7c78872593ed658e4"
 dependencies = [
  "alloy-consensus",
  "alloy-eips",
@@ -419,7 +419,7 @@ dependencies = [
 [[package]]
 name = "alloy-rpc-types-eth"
 version = "0.3.1"
-source = "git+https://github.com/sentioxyz/alloy?rev=99d79ab#99d79ab576b7b4b9a96e8196796a558906f717ef"
+source = "git+https://github.com/sentioxyz/alloy?rev=b5ea51a#b5ea51ae9ef510a4cf7fc1f7c78872593ed658e4"
 dependencies = [
  "alloy-consensus",
  "alloy-eips",
@@ -437,7 +437,7 @@ dependencies = [
 [[package]]
 name = "alloy-rpc-types-trace"
 version = "0.3.1"
-source = "git+https://github.com/sentioxyz/alloy?rev=99d79ab#99d79ab576b7b4b9a96e8196796a558906f717ef"
+source = "git+https://github.com/sentioxyz/alloy?rev=b5ea51a#b5ea51ae9ef510a4cf7fc1f7c78872593ed658e4"
 dependencies = [
  "alloy-primitives",
  "alloy-rpc-types-eth",
@@ -451,7 +451,7 @@ dependencies = [
 [[package]]
 name = "alloy-rpc-types-txpool"
 version = "0.3.1"
-source = "git+https://github.com/sentioxyz/alloy?rev=99d79ab#99d79ab576b7b4b9a96e8196796a558906f717ef"
+source = "git+https://github.com/sentioxyz/alloy?rev=b5ea51a#b5ea51ae9ef510a4cf7fc1f7c78872593ed658e4"
 dependencies = [
  "alloy-primitives",
  "alloy-rpc-types-eth",
@@ -462,7 +462,7 @@ dependencies = [
 [[package]]
 name = "alloy-serde"
 version = "0.3.1"
-source = "git+https://github.com/sentioxyz/alloy?rev=99d79ab#99d79ab576b7b4b9a96e8196796a558906f717ef"
+source = "git+https://github.com/sentioxyz/alloy?rev=b5ea51a#b5ea51ae9ef510a4cf7fc1f7c78872593ed658e4"
 dependencies = [
  "alloy-primitives",
  "arbitrary",
@@ -473,7 +473,7 @@ dependencies = [
 [[package]]
 name = "alloy-signer"
 version = "0.3.1"
-source = "git+https://github.com/sentioxyz/alloy?rev=99d79ab#99d79ab576b7b4b9a96e8196796a558906f717ef"
+source = "git+https://github.com/sentioxyz/alloy?rev=b5ea51a#b5ea51ae9ef510a4cf7fc1f7c78872593ed658e4"
 dependencies = [
  "alloy-dyn-abi",
  "alloy-primitives",
@@ -488,7 +488,7 @@ dependencies = [
 [[package]]
 name = "alloy-signer-aws"
 version = "0.3.1"
-source = "git+https://github.com/sentioxyz/alloy?rev=99d79ab#99d79ab576b7b4b9a96e8196796a558906f717ef"
+source = "git+https://github.com/sentioxyz/alloy?rev=b5ea51a#b5ea51ae9ef510a4cf7fc1f7c78872593ed658e4"
 dependencies = [
  "alloy-consensus",
  "alloy-network",
@@ -505,7 +505,7 @@ dependencies = [
 [[package]]
 name = "alloy-signer-gcp"
 version = "0.3.1"
-source = "git+https://github.com/sentioxyz/alloy?rev=99d79ab#99d79ab576b7b4b9a96e8196796a558906f717ef"
+source = "git+https://github.com/sentioxyz/alloy?rev=b5ea51a#b5ea51ae9ef510a4cf7fc1f7c78872593ed658e4"
 dependencies = [
  "alloy-consensus",
  "alloy-network",
@@ -522,7 +522,7 @@ dependencies = [
 [[package]]
 name = "alloy-signer-ledger"
 version = "0.3.1"
-source = "git+https://github.com/sentioxyz/alloy?rev=99d79ab#99d79ab576b7b4b9a96e8196796a558906f717ef"
+source = "git+https://github.com/sentioxyz/alloy?rev=b5ea51a#b5ea51ae9ef510a4cf7fc1f7c78872593ed658e4"
 dependencies = [
  "alloy-consensus",
  "alloy-dyn-abi",
@@ -541,7 +541,7 @@ dependencies = [
 [[package]]
 name = "alloy-signer-local"
 version = "0.3.1"
-source = "git+https://github.com/sentioxyz/alloy?rev=99d79ab#99d79ab576b7b4b9a96e8196796a558906f717ef"
+source = "git+https://github.com/sentioxyz/alloy?rev=b5ea51a#b5ea51ae9ef510a4cf7fc1f7c78872593ed658e4"
 dependencies = [
  "alloy-consensus",
  "alloy-network",
@@ -560,7 +560,7 @@ dependencies = [
 [[package]]
 name = "alloy-signer-trezor"
 version = "0.3.1"
-source = "git+https://github.com/sentioxyz/alloy?rev=99d79ab#99d79ab576b7b4b9a96e8196796a558906f717ef"
+source = "git+https://github.com/sentioxyz/alloy?rev=b5ea51a#b5ea51ae9ef510a4cf7fc1f7c78872593ed658e4"
 dependencies = [
  "alloy-consensus",
  "alloy-network",
@@ -649,7 +649,7 @@ dependencies = [
 [[package]]
 name = "alloy-transport"
 version = "0.3.1"
-source = "git+https://github.com/sentioxyz/alloy?rev=99d79ab#99d79ab576b7b4b9a96e8196796a558906f717ef"
+source = "git+https://github.com/sentioxyz/alloy?rev=b5ea51a#b5ea51ae9ef510a4cf7fc1f7c78872593ed658e4"
 dependencies = [
  "alloy-json-rpc",
  "base64 0.22.1",
@@ -667,7 +667,7 @@ dependencies = [
 [[package]]
 name = "alloy-transport-http"
 version = "0.3.1"
-source = "git+https://github.com/sentioxyz/alloy?rev=99d79ab#99d79ab576b7b4b9a96e8196796a558906f717ef"
+source = "git+https://github.com/sentioxyz/alloy?rev=b5ea51a#b5ea51ae9ef510a4cf7fc1f7c78872593ed658e4"
 dependencies = [
  "alloy-json-rpc",
  "alloy-transport",
@@ -681,7 +681,7 @@ dependencies = [
 [[package]]
 name = "alloy-transport-ipc"
 version = "0.3.1"
-source = "git+https://github.com/sentioxyz/alloy?rev=99d79ab#99d79ab576b7b4b9a96e8196796a558906f717ef"
+source = "git+https://github.com/sentioxyz/alloy?rev=b5ea51a#b5ea51ae9ef510a4cf7fc1f7c78872593ed658e4"
 dependencies = [
  "alloy-json-rpc",
  "alloy-pubsub",
@@ -701,7 +701,7 @@ dependencies = [
 [[package]]
 name = "alloy-transport-ws"
 version = "0.3.1"
-source = "git+https://github.com/sentioxyz/alloy?rev=99d79ab#99d79ab576b7b4b9a96e8196796a558906f717ef"
+source = "git+https://github.com/sentioxyz/alloy?rev=b5ea51a#b5ea51ae9ef510a4cf7fc1f7c78872593ed658e4"
 dependencies = [
  "alloy-pubsub",
  "alloy-transport",
@@ -7074,7 +7074,7 @@ dependencies = [
 [[package]]
 name = "revm-inspectors"
 version = "0.6.0"
-source = "git+https://github.com/sentioxyz/revm-inspectors?rev=87e2e39#87e2e39eb8424b80c021356d11e4cfb924286216"
+source = "git+https://github.com/sentioxyz/revm-inspectors?rev=14d00bb#14d00bb3a227352bd13962784603648c2c6c1a8f"
 dependencies = [
  "alloy-primitives",
  "alloy-rpc-types",
