@@ -85,8 +85,8 @@ dependencies = [
 
 [[package]]
 name = "alloy-consensus"
-version = "0.3.1"
-source = "git+https://github.com/sentioxyz/alloy?rev=b5ea51a#b5ea51ae9ef510a4cf7fc1f7c78872593ed658e4"
+version = "0.3.3"
+source = "git+https://github.com/sentioxyz/alloy?rev=53a432b#53a432be38c7c019102e4d173f5bdac47ba8d41b"
 dependencies = [
  "alloy-eips",
  "alloy-primitives",
@@ -98,8 +98,8 @@ dependencies = [
 
 [[package]]
 name = "alloy-contract"
-version = "0.3.1"
-source = "git+https://github.com/sentioxyz/alloy?rev=b5ea51a#b5ea51ae9ef510a4cf7fc1f7c78872593ed658e4"
+version = "0.3.3"
+source = "git+https://github.com/sentioxyz/alloy?rev=53a432b#53a432be38c7c019102e4d173f5bdac47ba8d41b"
 dependencies = [
  "alloy-dyn-abi",
  "alloy-json-abi",
@@ -166,8 +166,8 @@ dependencies = [
 
 [[package]]
 name = "alloy-eips"
-version = "0.3.1"
-source = "git+https://github.com/sentioxyz/alloy?rev=b5ea51a#b5ea51ae9ef510a4cf7fc1f7c78872593ed658e4"
+version = "0.3.3"
+source = "git+https://github.com/sentioxyz/alloy?rev=53a432b#53a432be38c7c019102e4d173f5bdac47ba8d41b"
 dependencies = [
  "alloy-eip2930",
  "alloy-eip7702",
@@ -184,8 +184,8 @@ dependencies = [
 
 [[package]]
 name = "alloy-genesis"
-version = "0.3.1"
-source = "git+https://github.com/sentioxyz/alloy?rev=b5ea51a#b5ea51ae9ef510a4cf7fc1f7c78872593ed658e4"
+version = "0.3.3"
+source = "git+https://github.com/sentioxyz/alloy?rev=53a432b#53a432be38c7c019102e4d173f5bdac47ba8d41b"
 dependencies = [
  "alloy-primitives",
  "alloy-serde",
@@ -206,8 +206,8 @@ dependencies = [
 
 [[package]]
 name = "alloy-json-rpc"
-version = "0.3.1"
-source = "git+https://github.com/sentioxyz/alloy?rev=b5ea51a#b5ea51ae9ef510a4cf7fc1f7c78872593ed658e4"
+version = "0.3.3"
+source = "git+https://github.com/sentioxyz/alloy?rev=53a432b#53a432be38c7c019102e4d173f5bdac47ba8d41b"
 dependencies = [
  "alloy-primitives",
  "alloy-sol-types",
@@ -219,8 +219,8 @@ dependencies = [
 
 [[package]]
 name = "alloy-network"
-version = "0.3.1"
-source = "git+https://github.com/sentioxyz/alloy?rev=b5ea51a#b5ea51ae9ef510a4cf7fc1f7c78872593ed658e4"
+version = "0.3.3"
+source = "git+https://github.com/sentioxyz/alloy?rev=53a432b#53a432be38c7c019102e4d173f5bdac47ba8d41b"
 dependencies = [
  "alloy-consensus",
  "alloy-eips",
@@ -239,9 +239,10 @@ dependencies = [
 
 [[package]]
 name = "alloy-network-primitives"
-version = "0.3.1"
-source = "git+https://github.com/sentioxyz/alloy?rev=b5ea51a#b5ea51ae9ef510a4cf7fc1f7c78872593ed658e4"
+version = "0.3.3"
+source = "git+https://github.com/sentioxyz/alloy?rev=53a432b#53a432be38c7c019102e4d173f5bdac47ba8d41b"
 dependencies = [
+ "alloy-eips",
  "alloy-primitives",
  "alloy-serde",
  "serde",
@@ -275,8 +276,8 @@ dependencies = [
 
 [[package]]
 name = "alloy-provider"
-version = "0.3.1"
-source = "git+https://github.com/sentioxyz/alloy?rev=b5ea51a#b5ea51ae9ef510a4cf7fc1f7c78872593ed658e4"
+version = "0.3.3"
+source = "git+https://github.com/sentioxyz/alloy?rev=53a432b#53a432be38c7c019102e4d173f5bdac47ba8d41b"
 dependencies = [
  "alloy-chains",
  "alloy-consensus",
@@ -313,8 +314,8 @@ dependencies = [
 
 [[package]]
 name = "alloy-pubsub"
-version = "0.3.1"
-source = "git+https://github.com/sentioxyz/alloy?rev=b5ea51a#b5ea51ae9ef510a4cf7fc1f7c78872593ed658e4"
+version = "0.3.3"
+source = "git+https://github.com/sentioxyz/alloy?rev=53a432b#53a432be38c7c019102e4d173f5bdac47ba8d41b"
 dependencies = [
  "alloy-json-rpc",
  "alloy-primitives",
@@ -325,7 +326,7 @@ dependencies = [
  "serde_json",
  "tokio",
  "tokio-stream",
- "tower 0.4.13",
+ "tower 0.5.0",
  "tracing",
 ]
 
@@ -353,8 +354,8 @@ dependencies = [
 
 [[package]]
 name = "alloy-rpc-client"
-version = "0.3.1"
-source = "git+https://github.com/sentioxyz/alloy?rev=b5ea51a#b5ea51ae9ef510a4cf7fc1f7c78872593ed658e4"
+version = "0.3.3"
+source = "git+https://github.com/sentioxyz/alloy?rev=53a432b#53a432be38c7c019102e4d173f5bdac47ba8d41b"
 dependencies = [
  "alloy-json-rpc",
  "alloy-primitives",
@@ -370,15 +371,15 @@ dependencies = [
  "serde_json",
  "tokio",
  "tokio-stream",
- "tower 0.4.13",
+ "tower 0.5.0",
  "tracing",
  "url",
 ]
 
 [[package]]
 name = "alloy-rpc-types"
-version = "0.3.1"
-source = "git+https://github.com/sentioxyz/alloy?rev=b5ea51a#b5ea51ae9ef510a4cf7fc1f7c78872593ed658e4"
+version = "0.3.3"
+source = "git+https://github.com/sentioxyz/alloy?rev=53a432b#53a432be38c7c019102e4d173f5bdac47ba8d41b"
 dependencies = [
  "alloy-rpc-types-anvil",
  "alloy-rpc-types-engine",
@@ -391,8 +392,8 @@ dependencies = [
 
 [[package]]
 name = "alloy-rpc-types-anvil"
-version = "0.3.1"
-source = "git+https://github.com/sentioxyz/alloy?rev=b5ea51a#b5ea51ae9ef510a4cf7fc1f7c78872593ed658e4"
+version = "0.3.3"
+source = "git+https://github.com/sentioxyz/alloy?rev=53a432b#53a432be38c7c019102e4d173f5bdac47ba8d41b"
 dependencies = [
  "alloy-primitives",
  "alloy-serde",
@@ -401,8 +402,8 @@ dependencies = [
 
 [[package]]
 name = "alloy-rpc-types-engine"
-version = "0.3.1"
-source = "git+https://github.com/sentioxyz/alloy?rev=b5ea51a#b5ea51ae9ef510a4cf7fc1f7c78872593ed658e4"
+version = "0.3.3"
+source = "git+https://github.com/sentioxyz/alloy?rev=53a432b#53a432be38c7c019102e4d173f5bdac47ba8d41b"
 dependencies = [
  "alloy-consensus",
  "alloy-eips",
@@ -418,8 +419,8 @@ dependencies = [
 
 [[package]]
 name = "alloy-rpc-types-eth"
-version = "0.3.1"
-source = "git+https://github.com/sentioxyz/alloy?rev=b5ea51a#b5ea51ae9ef510a4cf7fc1f7c78872593ed658e4"
+version = "0.3.3"
+source = "git+https://github.com/sentioxyz/alloy?rev=53a432b#53a432be38c7c019102e4d173f5bdac47ba8d41b"
 dependencies = [
  "alloy-consensus",
  "alloy-eips",
@@ -436,8 +437,8 @@ dependencies = [
 
 [[package]]
 name = "alloy-rpc-types-trace"
-version = "0.3.1"
-source = "git+https://github.com/sentioxyz/alloy?rev=b5ea51a#b5ea51ae9ef510a4cf7fc1f7c78872593ed658e4"
+version = "0.3.3"
+source = "git+https://github.com/sentioxyz/alloy?rev=53a432b#53a432be38c7c019102e4d173f5bdac47ba8d41b"
 dependencies = [
  "alloy-primitives",
  "alloy-rpc-types-eth",
@@ -450,8 +451,8 @@ dependencies = [
 
 [[package]]
 name = "alloy-rpc-types-txpool"
-version = "0.3.1"
-source = "git+https://github.com/sentioxyz/alloy?rev=b5ea51a#b5ea51ae9ef510a4cf7fc1f7c78872593ed658e4"
+version = "0.3.3"
+source = "git+https://github.com/sentioxyz/alloy?rev=53a432b#53a432be38c7c019102e4d173f5bdac47ba8d41b"
 dependencies = [
  "alloy-primitives",
  "alloy-rpc-types-eth",
@@ -461,8 +462,8 @@ dependencies = [
 
 [[package]]
 name = "alloy-serde"
-version = "0.3.1"
-source = "git+https://github.com/sentioxyz/alloy?rev=b5ea51a#b5ea51ae9ef510a4cf7fc1f7c78872593ed658e4"
+version = "0.3.3"
+source = "git+https://github.com/sentioxyz/alloy?rev=53a432b#53a432be38c7c019102e4d173f5bdac47ba8d41b"
 dependencies = [
  "alloy-primitives",
  "arbitrary",
@@ -472,8 +473,8 @@ dependencies = [
 
 [[package]]
 name = "alloy-signer"
-version = "0.3.1"
-source = "git+https://github.com/sentioxyz/alloy?rev=b5ea51a#b5ea51ae9ef510a4cf7fc1f7c78872593ed658e4"
+version = "0.3.3"
+source = "git+https://github.com/sentioxyz/alloy?rev=53a432b#53a432be38c7c019102e4d173f5bdac47ba8d41b"
 dependencies = [
  "alloy-dyn-abi",
  "alloy-primitives",
@@ -487,8 +488,8 @@ dependencies = [
 
 [[package]]
 name = "alloy-signer-aws"
-version = "0.3.1"
-source = "git+https://github.com/sentioxyz/alloy?rev=b5ea51a#b5ea51ae9ef510a4cf7fc1f7c78872593ed658e4"
+version = "0.3.3"
+source = "git+https://github.com/sentioxyz/alloy?rev=53a432b#53a432be38c7c019102e4d173f5bdac47ba8d41b"
 dependencies = [
  "alloy-consensus",
  "alloy-network",
@@ -504,8 +505,8 @@ dependencies = [
 
 [[package]]
 name = "alloy-signer-gcp"
-version = "0.3.1"
-source = "git+https://github.com/sentioxyz/alloy?rev=b5ea51a#b5ea51ae9ef510a4cf7fc1f7c78872593ed658e4"
+version = "0.3.3"
+source = "git+https://github.com/sentioxyz/alloy?rev=53a432b#53a432be38c7c019102e4d173f5bdac47ba8d41b"
 dependencies = [
  "alloy-consensus",
  "alloy-network",
@@ -521,8 +522,8 @@ dependencies = [
 
 [[package]]
 name = "alloy-signer-ledger"
-version = "0.3.1"
-source = "git+https://github.com/sentioxyz/alloy?rev=b5ea51a#b5ea51ae9ef510a4cf7fc1f7c78872593ed658e4"
+version = "0.3.3"
+source = "git+https://github.com/sentioxyz/alloy?rev=53a432b#53a432be38c7c019102e4d173f5bdac47ba8d41b"
 dependencies = [
  "alloy-consensus",
  "alloy-dyn-abi",
@@ -540,8 +541,8 @@ dependencies = [
 
 [[package]]
 name = "alloy-signer-local"
-version = "0.3.1"
-source = "git+https://github.com/sentioxyz/alloy?rev=b5ea51a#b5ea51ae9ef510a4cf7fc1f7c78872593ed658e4"
+version = "0.3.3"
+source = "git+https://github.com/sentioxyz/alloy?rev=53a432b#53a432be38c7c019102e4d173f5bdac47ba8d41b"
 dependencies = [
  "alloy-consensus",
  "alloy-network",
@@ -559,8 +560,8 @@ dependencies = [
 
 [[package]]
 name = "alloy-signer-trezor"
-version = "0.3.1"
-source = "git+https://github.com/sentioxyz/alloy?rev=b5ea51a#b5ea51ae9ef510a4cf7fc1f7c78872593ed658e4"
+version = "0.3.3"
+source = "git+https://github.com/sentioxyz/alloy?rev=53a432b#53a432be38c7c019102e4d173f5bdac47ba8d41b"
 dependencies = [
  "alloy-consensus",
  "alloy-network",
@@ -648,8 +649,8 @@ dependencies = [
 
 [[package]]
 name = "alloy-transport"
-version = "0.3.1"
-source = "git+https://github.com/sentioxyz/alloy?rev=b5ea51a#b5ea51ae9ef510a4cf7fc1f7c78872593ed658e4"
+version = "0.3.3"
+source = "git+https://github.com/sentioxyz/alloy?rev=53a432b#53a432be38c7c019102e4d173f5bdac47ba8d41b"
 dependencies = [
  "alloy-json-rpc",
  "base64 0.22.1",
@@ -659,29 +660,29 @@ dependencies = [
  "serde_json",
  "thiserror",
  "tokio",
- "tower 0.4.13",
+ "tower 0.5.0",
  "tracing",
  "url",
 ]
 
 [[package]]
 name = "alloy-transport-http"
-version = "0.3.1"
-source = "git+https://github.com/sentioxyz/alloy?rev=b5ea51a#b5ea51ae9ef510a4cf7fc1f7c78872593ed658e4"
+version = "0.3.3"
+source = "git+https://github.com/sentioxyz/alloy?rev=53a432b#53a432be38c7c019102e4d173f5bdac47ba8d41b"
 dependencies = [
  "alloy-json-rpc",
  "alloy-transport",
  "reqwest",
  "serde_json",
- "tower 0.4.13",
+ "tower 0.5.0",
  "tracing",
  "url",
 ]
 
 [[package]]
 name = "alloy-transport-ipc"
-version = "0.3.1"
-source = "git+https://github.com/sentioxyz/alloy?rev=b5ea51a#b5ea51ae9ef510a4cf7fc1f7c78872593ed658e4"
+version = "0.3.3"
+source = "git+https://github.com/sentioxyz/alloy?rev=53a432b#53a432be38c7c019102e4d173f5bdac47ba8d41b"
 dependencies = [
  "alloy-json-rpc",
  "alloy-pubsub",
@@ -700,8 +701,8 @@ dependencies = [
 
 [[package]]
 name = "alloy-transport-ws"
-version = "0.3.1"
-source = "git+https://github.com/sentioxyz/alloy?rev=b5ea51a#b5ea51ae9ef510a4cf7fc1f7c78872593ed658e4"
+version = "0.3.3"
+source = "git+https://github.com/sentioxyz/alloy?rev=53a432b#53a432be38c7c019102e4d173f5bdac47ba8d41b"
 dependencies = [
  "alloy-pubsub",
  "alloy-transport",
@@ -2839,7 +2840,7 @@ dependencies = [
  "console_error_panic_hook",
  "pest",
  "pest_derive",
- "quick-xml",
+ "quick-xml 0.18.1",
  "wasm-bindgen",
 ]
 
@@ -3235,6 +3236,7 @@ dependencies = [
  "anvil",
  "async-trait",
  "axum",
+ "chrono",
  "clap",
  "clap_complete",
  "clap_complete_fig",
@@ -3266,6 +3268,7 @@ dependencies = [
  "humantime-serde",
  "hyper 1.4.1",
  "indicatif",
+ "inferno",
  "itertools 0.13.0",
  "mockall",
  "opener",
@@ -3273,6 +3276,7 @@ dependencies = [
  "paste",
  "path-slash",
  "proptest",
+ "quick-junit",
  "rayon",
  "regex",
  "reqwest",
@@ -5078,6 +5082,23 @@ dependencies = [
 ]
 
 [[package]]
+name = "inferno"
+version = "0.11.21"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "232929e1d75fe899576a3d5c7416ad0d88dbfbb3c3d6aa00873a7408a50ddb88"
+dependencies = [
+ "ahash",
+ "is-terminal",
+ "itoa",
+ "log",
+ "num-format",
+ "once_cell",
+ "quick-xml 0.26.0",
+ "rgb",
+ "str_stack",
+]
+
+[[package]]
 name = "inlinable_string"
 version = "0.1.15"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -5674,6 +5695,15 @@ name = "new_debug_unreachable"
 version = "1.0.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "650eef8c711430f1a879fdd01d4745a7deea475becfb90269c06775983bbf086"
+
+[[package]]
+name = "newtype-uuid"
+version = "1.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "3526cb7c660872e401beaf3297f95f548ce3b4b4bdd8121b7c0713771d7c4a6e"
+dependencies = [
+ "uuid 1.10.0",
+]
 
 [[package]]
 name = "nibble_vec"
@@ -6767,10 +6797,43 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "a1d01941d82fa2ab50be1e79e6714289dd7cde78eba4c074bc5a4374f650dfe0"
 
 [[package]]
+name = "quick-junit"
+version = "0.5.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "62ffd2f9a162cfae131bed6d9d1ed60adced33be340a94f96952897d7cb0c240"
+dependencies = [
+ "chrono",
+ "indexmap 2.5.0",
+ "newtype-uuid",
+ "quick-xml 0.36.1",
+ "strip-ansi-escapes",
+ "thiserror",
+ "uuid 1.10.0",
+]
+
+[[package]]
 name = "quick-xml"
 version = "0.18.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "3cc440ee4802a86e357165021e3e255a9143724da31db1e2ea540214c96a0f82"
+dependencies = [
+ "memchr",
+]
+
+[[package]]
+name = "quick-xml"
+version = "0.26.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "7f50b1c63b38611e7d4d7f68b82d3ad0cc71a2ad2e7f61fc10f1328d917c93cd"
+dependencies = [
+ "memchr",
+]
+
+[[package]]
+name = "quick-xml"
+version = "0.36.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "96a05e2e8efddfa51a84ca47cec303fac86c8541b686d37cac5efc0e094417bc"
 dependencies = [
  "memchr",
 ]
@@ -7074,7 +7137,7 @@ dependencies = [
 [[package]]
 name = "revm-inspectors"
 version = "0.6.0"
-source = "git+https://github.com/sentioxyz/revm-inspectors?rev=14d00bb#14d00bb3a227352bd13962784603648c2c6c1a8f"
+source = "git+https://github.com/sentioxyz/revm-inspectors?rev=698c42a#698c42a70fe70b2a80fd1ed232210da44b772634"
 dependencies = [
  "alloy-primitives",
  "alloy-rpc-types",
@@ -7146,6 +7209,15 @@ checksum = "f8dd2a808d456c4a54e300a23e9f5a67e122c3024119acbfd73e3bf664491cb2"
 dependencies = [
  "hmac",
  "subtle",
+]
+
+[[package]]
+name = "rgb"
+version = "0.8.50"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "57397d16646700483b67d2dd6511d79318f9d057fdbd21a4066aeac8b41d310a"
+dependencies = [
+ "bytemuck",
 ]
 
 [[package]]
@@ -8123,6 +8195,12 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "a2eb9349b6444b326872e140eb1cf5e7c522154d69e7a0ffb0fb81c06b37543f"
 
 [[package]]
+name = "str_stack"
+version = "0.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "9091b6114800a5f2141aee1d1b9d6ca3592ac062dc5decb3764ec5895a47b4eb"
+
+[[package]]
 name = "string_cache"
 version = "0.8.7"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -8146,6 +8224,15 @@ dependencies = [
  "phf_shared 0.10.0",
  "proc-macro2",
  "quote",
+]
+
+[[package]]
+name = "strip-ansi-escapes"
+version = "0.2.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "55ff8ef943b384c414f54aefa961dd2bd853add74ec75e7ac74cf91dba62bcfa"
+dependencies = [
+ "vte",
 ]
 
 [[package]]
@@ -8707,6 +8794,10 @@ version = "0.5.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "36b837f86b25d7c0d7988f00a54e74739be6477f2aac6201b8f429a7569991b7"
 dependencies = [
+ "futures-core",
+ "futures-util",
+ "pin-project-lite",
+ "sync_wrapper 0.1.2",
  "tower-layer",
  "tower-service",
 ]
@@ -9116,6 +9207,26 @@ name = "vsimd"
 version = "0.8.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "5c3082ca00d5a5ef149bb8b555a72ae84c9c59f7250f013ac822ac2e49b19c64"
+
+[[package]]
+name = "vte"
+version = "0.11.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "f5022b5fbf9407086c180e9557be968742d839e68346af7792b8592489732197"
+dependencies = [
+ "utf8parse",
+ "vte_generate_state_changes",
+]
+
+[[package]]
+name = "vte_generate_state_changes"
+version = "0.1.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "2e369bee1b05d510a7b4ed645f5faa90619e05437111783ea5848f28d97d3c2e"
+dependencies = [
+ "proc-macro2",
+ "quote",
+]
 
 [[package]]
 name = "wait-timeout"
