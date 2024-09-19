@@ -323,4 +323,4 @@ alloy-transport-http = { git = "https://github.com/sentioxyz/alloy", rev = "53a4
 alloy-transport-ipc = { git = "https://github.com/sentioxyz/alloy", rev = "53a432b" }
 alloy-transport-ws = { git = "https://github.com/sentioxyz/alloy", rev = "53a432b" }
 
-revm-inspectors = { git = "https://github.com/sentioxyz/revm-inspectors", rev = "698c42a" }
+revm-inspectors = { git = "https://github.com/sentioxyz/revm-inspectors", rev = "950ab0a" }
