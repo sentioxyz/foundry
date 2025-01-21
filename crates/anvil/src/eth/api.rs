@@ -76,6 +76,8 @@ use std::{
     sync::Arc,
     time::Duration,
 };
+use std::ops::Not;
+use futures::StreamExt;
 use anvil_core::types::{StorageRangeAtResult, TraceCallManyBundle, TraceCallManyContext};
 
 /// The client version: `anvil/v{major}.{minor}.{patch}`
@@ -1945,7 +1947,7 @@ impl EthApi {
                     let config = fork.config.read();
 
                     NodeForkConfig {
-                        fork_url: Some(config.eth_rpc_url.clone()),
+                        fork_url: config.eth_rpc_url.contains("sentio").not().then_some(config.eth_rpc_url.clone()),
                         fork_block_number: Some(config.block_number),
                         fork_retry_backoff: Some(config.backoff.as_millis()),
                     }
