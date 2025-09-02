@@ -414,3 +414,30 @@ idna_adapter = "=1.1.0"
 
 ## solar
 # solar = { package = "solar-compiler", git = "https://github.com/paradigmxyz/solar.git", branch = "main" }
+
+alloy-consensus = { git = "https://github.com/sentioxyz/alloy", branch = "release/v1.0.27" }
+alloy-contract = { git = "https://github.com/sentioxyz/alloy", branch = "release/v1.0.27" }
+alloy-eips = { git = "https://github.com/sentioxyz/alloy", branch = "release/v1.0.27" }
+alloy-genesis = { git = "https://github.com/sentioxyz/alloy", branch = "release/v1.0.27" }
+alloy-json-rpc = { git = "https://github.com/sentioxyz/alloy", branch = "release/v1.0.27" }
+alloy-network = { git = "https://github.com/sentioxyz/alloy", branch = "release/v1.0.27" }
+alloy-network-primitives = { git = "https://github.com/sentioxyz/alloy", branch = "release/v1.0.27" }
+alloy-provider = { git = "https://github.com/sentioxyz/alloy", branch = "release/v1.0.27" }
+alloy-pubsub = { git = "https://github.com/sentioxyz/alloy", branch = "release/v1.0.27" }
+alloy-rpc-client = { git = "https://github.com/sentioxyz/alloy", branch = "release/v1.0.27" }
+alloy-rpc-types = { git = "https://github.com/sentioxyz/alloy", branch = "release/v1.0.27" }
+alloy-rpc-types-eth = { git = "https://github.com/sentioxyz/alloy", branch = "release/v1.0.27" }
+alloy-rpc-types-trace = { git = "https://github.com/sentioxyz/alloy", branch = "release/v1.0.27" }
+alloy-serde = { git = "https://github.com/sentioxyz/alloy", branch = "release/v1.0.27" }
+alloy-signer = { git = "https://github.com/sentioxyz/alloy", branch = "release/v1.0.27" }
+alloy-signer-aws = { git = "https://github.com/sentioxyz/alloy", branch = "release/v1.0.27" }
+alloy-signer-gcp = { git = "https://github.com/sentioxyz/alloy", branch = "release/v1.0.27" }
+alloy-signer-ledger = { git = "https://github.com/sentioxyz/alloy", branch = "release/v1.0.27" }
+alloy-signer-local = { git = "https://github.com/sentioxyz/alloy", branch = "release/v1.0.27" }
+alloy-signer-trezor = { git = "https://github.com/sentioxyz/alloy", branch = "release/v1.0.27" }
+alloy-transport = { git = "https://github.com/sentioxyz/alloy", branch = "release/v1.0.27" }
+alloy-transport-http = { git = "https://github.com/sentioxyz/alloy", branch = "release/v1.0.27" }
+alloy-transport-ipc = { git = "https://github.com/sentioxyz/alloy", branch = "release/v1.0.27" }
+alloy-transport-ws = { git = "https://github.com/sentioxyz/alloy", branch = "release/v1.0.27" }
+
+revm-inspectors = { git = "https://github.com/sentioxyz/revm-inspectors", branch = "release/v0.29.0" }

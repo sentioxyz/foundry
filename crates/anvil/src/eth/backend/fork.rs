@@ -385,14 +385,15 @@ impl ClientFork {
         hash: B256,
         opts: GethDebugTracingOptions,
     ) -> Result<GethTrace, TransportError> {
-        if let Some(traces) = self.storage_read().geth_transaction_traces.get(&hash).cloned() {
-            return Ok(traces);
-        }
+        // FIXME disable this since tracer configs can be different
+        // if let Some(traces) = self.storage_read().geth_transaction_traces.get(&hash).cloned() {
+        //     return Ok(traces);
+        // }
 
         let trace = self.provider().debug_trace_transaction(hash, opts).await?;
 
-        let mut storage = self.storage_write();
-        storage.geth_transaction_traces.insert(hash, trace.clone());
+        // let mut storage = self.storage_write();
+        // storage.geth_transaction_traces.insert(hash, trace.clone());
 
         Ok(trace)
     }

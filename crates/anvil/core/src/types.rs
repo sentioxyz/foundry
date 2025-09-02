@@ -1,6 +1,9 @@
-use alloy_primitives::Bytes;
-use alloy_rpc_types::TransactionRequest;
-use serde::Deserialize;
+use std::collections::HashMap;
+use alloy_eips::BlockId;
+use alloy_primitives::{Bytes, B256};
+use alloy_rpc_types::{BlockOverrides, TransactionIndex, TransactionRequest};
+use alloy_serde::WithOtherFields;
+use serde::{Deserialize, Serialize};
 
 /// Represents the options used in `anvil_reorg`
 #[derive(Debug, Clone, Deserialize)]
@@ -17,4 +20,35 @@ pub struct ReorgOptions {
 pub enum TransactionData {
     JSON(TransactionRequest),
     Raw(Bytes),
+}
+
+#[derive(Clone, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct TraceCallManyBundle {
+    pub transactions: Vec<WithOtherFields<TransactionRequest>>,
+    pub block_override: Option<BlockOverrides>
+}
+
+#[derive(Clone, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct TraceCallManyContext {
+    pub block_number: Option<BlockId>,
+    #[serde(default)]
+    pub transaction_index: TransactionIndex
+}
+
+#[derive(Clone, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct StorageRangeAtResult {
+    pub storage: StorageMap,
+    pub next_key: Option<B256>,
+}
+
+pub type StorageMap = HashMap<B256, StorageEntry>;
+
+#[derive(Clone, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct StorageEntry {
+    pub key: B256,
+    pub value: B256
 }

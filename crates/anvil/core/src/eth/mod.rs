@@ -1,21 +1,14 @@
 use crate::{eth::subscription::SubscriptionId, types::ReorgOptions};
 use alloy_primitives::{Address, B64, B256, Bytes, TxHash, U256};
-use alloy_rpc_types::{
-    BlockId, BlockNumberOrTag as BlockNumber, BlockOverrides, Filter, Index,
-    anvil::{Forking, MineOptions},
-    pubsub::{Params as SubscriptionParams, SubscriptionKind},
-    request::TransactionRequest,
-    simulate::SimulatePayload,
-    state::StateOverride,
-    trace::{
-        filter::TraceFilter,
-        geth::{GethDebugTracingCallOptions, GethDebugTracingOptions},
-    },
-};
+use alloy_rpc_types::{BlockId, BlockNumberOrTag as BlockNumber, BlockOverrides, Filter, Index, anvil::{Forking, MineOptions}, pubsub::{Params as SubscriptionParams, SubscriptionKind}, request::TransactionRequest, simulate::SimulatePayload, state::StateOverride, trace::{
+    filter::TraceFilter,
+    geth::{GethDebugTracingCallOptions, GethDebugTracingOptions},
+}, TransactionIndex};
 use alloy_serde::WithOtherFields;
 use foundry_common::serde_helpers::{
     deserialize_number, deserialize_number_opt, deserialize_number_seq,
 };
+use crate::types::{TraceCallManyBundle, TraceCallManyContext};
 
 pub mod block;
 pub mod subscription;
@@ -78,6 +71,9 @@ pub enum EthRequest {
 
     #[serde(rename = "eth_getStorageAt")]
     EthGetStorageAt(Address, U256, Option<BlockId>),
+
+    #[cfg_attr(feature = "serde", serde(rename = "debug_storageRangeAt"))]
+    DebugStorageRangeAt(BlockId, TransactionIndex, Address, U256, usize),
 
     #[serde(rename = "eth_getBlockByHash")]
     EthGetBlockByHash(B256, bool),
@@ -280,6 +276,13 @@ pub enum EthRequest {
         #[serde(default)] GethDebugTracingCallOptions,
     ),
 
+    #[cfg_attr(feature = "serde", serde(rename = "debug_traceCallMany"))]
+    DebugTraceCallMany(
+        Vec<TraceCallManyBundle>,
+        TraceCallManyContext,
+        #[cfg_attr(feature = "serde", serde(default))] GethDebugTracingCallOptions,
+    ),
+
     /// reth's `debug_codeByHash` endpoint
     #[serde(rename = "debug_codeByHash")]
     DebugCodeByHash(B256, #[serde(default)] Option<BlockId>),
@@ -472,6 +475,12 @@ pub enum EthRequest {
     /// properties, etc.) into a saveable data blob
     #[serde(rename = "anvil_dumpState", alias = "hardhat_dumpState")]
     DumpState(#[serde(default)] Option<Params<Option<bool>>>),
+
+    #[cfg_attr(
+        feature = "serde",
+        serde(rename = "anvil_dumpStateJson", with = "empty_params")
+    )]
+    DumpStateJson(()),
 
     /// Adds state previously dumped with `DumpState` to the current chain
     #[serde(rename = "anvil_loadState", alias = "hardhat_loadState", with = "sequence")]

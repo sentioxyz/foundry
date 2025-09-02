@@ -3,9 +3,7 @@
 use self::state::trie_storage;
 use super::executor::new_evm_with_inspector_ref;
 use crate::{
-    ForkChoice, NodeConfig, PrecompileFactory,
-    config::PruneStateHistoryConfig,
-    eth::{
+    config::PruneStateHistoryConfig, eth::{
         backend::{
             cheats::{CheatEcrecover, CheatsManager},
             db::{Db, MaybeFullDatabase, SerializableState},
@@ -18,7 +16,7 @@ use crate::{
                 storage::MinedTransactionReceipt,
             },
             notifications::{NewBlockNotification, NewBlockNotifications},
-            time::{TimeManager, utc_from_secs},
+            time::{utc_from_secs, TimeManager},
             validate::TransactionValidator,
         },
         error::{BlockchainError, ErrDetail, InvalidTransactionError},
@@ -26,71 +24,65 @@ use crate::{
         macros::node_info,
         pool::transactions::PoolTransaction,
         sign::build_typed_transaction,
-    },
-    evm::celo_precompile,
+    }, evm::celo_precompile,
     inject_precompiles,
     mem::{
         inspector::AnvilInspector,
         storage::{BlockchainStorage, InMemoryBlockStates, MinedBlockOutcome},
     },
+    ForkChoice,
+    NodeConfig,
+    PrecompileFactory,
 };
 use alloy_chains::NamedChain;
 use alloy_consensus::{
-    Account, Blob, BlockHeader, EnvKzgSettings, Header, Receipt, ReceiptWithBloom, Signed,
-    Transaction as TransactionTrait, TxEnvelope,
-    proofs::{calculate_receipt_root, calculate_transaction_root},
-    transaction::Recovered,
+    proofs::{calculate_receipt_root, calculate_transaction_root}, transaction::Recovered, Account, Blob, BlockHeader, EnvKzgSettings, Header, Receipt,
+    ReceiptWithBloom, Signed,
+    Transaction as TransactionTrait,
+    TxEnvelope,
 };
 use alloy_eips::{eip1559::BaseFeeParams, eip4844::kzg_to_versioned_hash, eip7840::BlobParams};
 use alloy_evm::{
-    Database, Evm,
-    eth::EthEvmContext,
-    overrides::{OverrideBlockHashes, apply_state_overrides},
+    eth::EthEvmContext, overrides::{apply_state_overrides, OverrideBlockHashes},
     precompiles::{DynPrecompile, Precompile, PrecompilesMap},
+    Database,
+    Evm,
 };
 use alloy_network::{
     AnyHeader, AnyRpcBlock, AnyRpcHeader, AnyRpcTransaction, AnyTxEnvelope, AnyTxType,
     EthereumWallet, UnknownTxEnvelope, UnknownTypedTransaction,
 };
 use alloy_primitives::{
-    Address, B256, Bytes, TxHash, TxKind, U64, U256, address, hex, keccak256, logs_bloom,
-    map::HashMap, utils::Unit,
+    address, hex, keccak256, logs_bloom, map::HashMap, utils::Unit, Address, Bytes, TxHash, TxKind, B256,
+    U256, U64,
 };
-use alloy_rpc_types::{
-    AccessList, Block as AlloyBlock, BlockId, BlockNumberOrTag as BlockNumber, BlockTransactions,
-    EIP1186AccountProofResponse as AccountProof, EIP1186StorageProof as StorageProof, Filter,
-    Header as AlloyHeader, Index, Log, Transaction, TransactionReceipt,
-    anvil::Forking,
-    request::TransactionRequest,
-    serde_helpers::JsonStorageKey,
-    simulate::{SimBlock, SimCallResult, SimulatePayload, SimulatedBlock},
-    state::EvmOverrides,
-    trace::{
-        filter::TraceFilter,
-        geth::{
-            GethDebugBuiltInTracerType, GethDebugTracerType, GethDebugTracingCallOptions,
-            GethDebugTracingOptions, GethTrace, NoopFrame,
-        },
-        parity::LocalizedTransactionTrace,
+use alloy_rpc_types::trace::geth::sentio::SentioReceipt;
+use alloy_rpc_types::{anvil::Forking, request::TransactionRequest, serde_helpers::JsonStorageKey, simulate::{SimBlock, SimCallResult, SimulatePayload, SimulatedBlock}, state::EvmOverrides, trace::{
+    filter::TraceFilter,
+    geth::{
+        GethDebugBuiltInTracerType, GethDebugTracerType, GethDebugTracingCallOptions,
+        GethDebugTracingOptions, GethTrace, NoopFrame,
     },
-};
+    parity::LocalizedTransactionTrace,
+}, AccessList, Block as AlloyBlock, BlockId, BlockNumberOrTag as BlockNumber, BlockTransactions, EIP1186AccountProofResponse as AccountProof, EIP1186StorageProof as StorageProof, Filter, Header as AlloyHeader, Index, Log, Transaction, TransactionIndex, TransactionReceipt};
 use alloy_serde::{OtherFields, WithOtherFields};
 use alloy_signer::Signature;
 use alloy_signer_local::PrivateKeySigner;
-use alloy_trie::{HashBuilder, Nibbles, proof::ProofRetainer};
+use alloy_trie::{proof::ProofRetainer, HashBuilder, Nibbles};
 use anvil_core::eth::{
     block::{Block, BlockInfo},
     transaction::{
-        DepositReceipt, MaybeImpersonatedTransaction, PendingTransaction, ReceiptResponse,
-        TransactionInfo, TypedReceipt, TypedTransaction, has_optimism_fields,
-        transaction_request_to_typed,
+        has_optimism_fields, transaction_request_to_typed, DepositReceipt, MaybeImpersonatedTransaction,
+        PendingTransaction, ReceiptResponse, TransactionInfo, TypedReceipt,
+        TypedTransaction,
     },
     wallet::{Capabilities, DelegationCapability, WalletCapabilities},
 };
+use anvil_core::types::{StorageEntry, StorageMap, StorageRangeAtResult, TraceCallManyBundle};
 use anvil_rpc::error::RpcError;
 use chrono::Datelike;
 use eyre::{Context, Result};
-use flate2::{Compression, read::GzDecoder, write::GzEncoder};
+use flate2::{read::GzDecoder, write::GzEncoder, Compression};
 use foundry_evm::{
     backend::{DatabaseError, DatabaseResult, RevertStateSnapshotAction},
     constants::DEFAULT_CREATE2_DEPLOYER_RUNTIME_CODE,
@@ -100,25 +92,20 @@ use foundry_evm::{
     utils::{get_blob_base_fee_update_fraction, get_blob_base_fee_update_fraction_by_spec_id},
 };
 use foundry_evm_core::{either_evm::EitherEvm, precompiles::EC_RECOVER};
-use futures::channel::mpsc::{UnboundedSender, unbounded};
+use futures::channel::mpsc::{unbounded, UnboundedSender};
+use itertools::Itertools;
 use op_alloy_consensus::DEPOSIT_TX_TYPE_ID;
 use op_revm::{
-    OpContext, OpHaltReason, OpTransaction, transaction::deposit::DepositTransactionParts,
+    transaction::deposit::DepositTransactionParts, OpContext, OpHaltReason, OpTransaction,
 };
 use parking_lot::{Mutex, RwLock};
-use revm::{
-    DatabaseCommit, Inspector,
-    context::{Block as RevmBlock, BlockEnv, TxEnv},
-    context_interface::{
-        block::BlobExcessGasAndPrice,
-        result::{ExecutionResult, Output, ResultAndState},
-    },
-    database::{CacheDB, WrapDatabaseRef},
-    interpreter::InstructionResult,
-    precompile::secp256r1::{P256VERIFY, P256VERIFY_BASE_GAS_FEE},
-    primitives::{KECCAK_EMPTY, hardfork::SpecId},
-    state::AccountInfo,
-};
+use revm::context::Transaction as OtherTransaction;
+use revm::database::DbAccount;
+use revm::{context::{Block as RevmBlock, BlockEnv, TxEnv}, context_interface::{
+    block::BlobExcessGasAndPrice,
+    result::{ExecutionResult, Output, ResultAndState},
+}, database::{CacheDB, WrapDatabaseRef}, interpreter::InstructionResult, precompile::secp256r1::{P256VERIFY, P256VERIFY_BASE_GAS_FEE}, primitives::{hardfork::SpecId, KECCAK_EMPTY}, state::AccountInfo, Database as OtherDatabase, DatabaseCommit, Inspector};
+use revm_inspectors::tracing::{SentioPrestateTraceBuilder, SentioTraceBuilder};
 use std::{
     collections::BTreeMap,
     fmt::Debug,
@@ -128,7 +115,7 @@ use std::{
     sync::Arc,
     time::Duration,
 };
-use storage::{Blockchain, DEFAULT_HISTORY_LIMIT, MinedTransaction};
+use storage::{Blockchain, MinedTransaction, DEFAULT_HISTORY_LIMIT};
 use tokio::sync::RwLock as AsyncRwLock;
 
 pub mod cache;
@@ -1926,6 +1913,10 @@ impl Backend {
             opts;
         let GethDebugTracingOptions { config, tracer, tracer_config, .. } = tracing_options;
 
+        let origin = &request.from.unwrap_or_default();
+        let nonce = &request.nonce.unwrap_or(0);
+        let gas_price = &request.gas_price.unwrap_or(0);
+
         self.with_database_at(block_request, |state, mut block| {
             let block_number = block.number;
 
@@ -1962,11 +1953,72 @@ impl Backend {
                                 .geth_call_traces(call_config, result.gas_used())
                                 .into())
                         }
+                        GethDebugBuiltInTracerType::SentioTracer => {
+                            let sentio_tracer_config = tracer_config
+                                .into_sentio_config()
+                                .map_err(|e| (RpcError::invalid_params(e.to_string())))?;
+
+                            let inspector_cfg = TracingInspectorConfig::default_geth().set_record_logs(true).set_memory_snapshots(true);
+                            let mut inspector = self.build_inspector().with_tracing_config(inspector_cfg);
+
+                            let env = self.build_call_env(request, fee_details, block);
+                            let mut evm =
+                                self.new_evm_with_inspector_ref(&cache_db, &env, &mut inspector);
+                            let ResultAndState { result, state: _ } = evm.transact(env.tx)?;
+
+                            let refund = if let ExecutionResult::Success { gas_refunded, .. } = result {
+                                gas_refunded
+                            } else {
+                                0
+                            };
+
+                            let bn = block_number.to::<u64>();
+                            let block_hash = evm.db_mut().block_hash(bn)?;
+
+                            let receipt = SentioReceipt {
+                                nonce: Some(nonce.clone()),
+                                block_number: Some(U64::from(bn)),
+                                block_hash: Some(block_hash),
+                                gas_price: Some(U256::from(gas_price.clone())),
+                                transaction_index: Some(0),
+                                tx_hash: None,
+                            };
+                            let gas_used = result.gas_used();
+
+                            drop(evm);
+                            let tracing_inspector = inspector.tracer.expect("tracer disappeared");
+
+                            Ok(SentioTraceBuilder::new(tracing_inspector.into_traces().into_nodes(), Some(origin.clone()), sentio_tracer_config)
+                                .sentio_traces(gas_used, refund, Some(receipt))
+                                .into())
+                        }
+                        GethDebugBuiltInTracerType::SentioPrestateTracer => {
+                            let sentio_prestate_tracer_config = tracer_config
+                                .into_sentio_prestate_config()
+                                .map_err(|e| (RpcError::invalid_params(e.to_string())))?;
+
+                            let inspector_cfg = TracingInspectorConfig::default_geth().set_record_logs(true).set_memory_snapshots(true);
+                            let mut inspector = self.build_inspector().with_tracing_config(inspector_cfg);
+
+                            let env = self.build_call_env(request, fee_details, block);
+                            let mut evm =
+                                self.new_evm_with_inspector_ref(&cache_db, &env, &mut inspector);
+                            let result_and_state = evm.transact(env.tx)?;
+                            drop(evm);
+
+                            let tracing_inspector = inspector.tracer.expect("tracer disappeared");
+                            let trace = SentioPrestateTraceBuilder::new(tracing_inspector.into_traces().into_nodes(), sentio_prestate_tracer_config)
+                                .sentio_prestate_traces(&result_and_state, &cache_db)?
+                                .into();
+
+                            Ok(trace)
+                        }
                         GethDebugBuiltInTracerType::NoopTracer => Ok(NoopFrame::default().into()),
                         GethDebugBuiltInTracerType::FourByteTracer
                         | GethDebugBuiltInTracerType::PreStateTracer
                         | GethDebugBuiltInTracerType::MuxTracer
-                        | GethDebugBuiltInTracerType::FlatCallTracer => {
+                        | GethDebugBuiltInTracerType::FlatCallTracer
+                        | GethDebugBuiltInTracerType::SentioRethRawTracer => {
                             Err(RpcError::invalid_params("unsupported tracer type").into())
                         }
                     },
@@ -2031,6 +2083,206 @@ impl Backend {
             Ok(res)
         })
         .await?
+    }
+
+    pub async fn call_many_with_tracing(
+        &self,
+        bundles: Vec<TraceCallManyBundle>,
+        block_request: Option<BlockRequest>,
+        // transaction_index not supported for now, ignored
+        _: TransactionIndex,
+        opts: GethDebugTracingCallOptions,
+    ) -> Result<Vec<Vec<Option<GethTrace>>>, BlockchainError> {
+        let GethDebugTracingCallOptions { tracing_options, block_overrides: _, state_overrides } =
+            opts;
+        let GethDebugTracingOptions { config, tracer, tracer_config, .. } = tracing_options;
+
+        self.with_database_at(block_request, |state, mut block| {
+            let mut cache_db = CacheDB::new(state);
+            if let Some(state_overrides) = state_overrides {
+                apply_state_overrides(state_overrides, &mut cache_db)?;
+            }
+
+            let mut traces: Vec<Vec<Option<GethTrace>>> = vec![];
+            for bundle in bundles {
+                let bundle_block = block.clone();
+                if let Some(block_overrides) = bundle.block_override {
+                    cache_db.apply_block_overrides(block_overrides, &mut block);
+                }
+                let block_number = bundle_block.number;
+
+                let mut bundle_traces: Vec<Option<GethTrace>> = vec![];
+                for request in bundle.transactions {
+                    let origin = &request.from.unwrap_or_default();
+                    let nonce = &request.nonce.unwrap_or(0);
+                    let gas_price = &request.gas_price.unwrap_or(0);
+
+                    let mut inspector = if let Some(tracer) = tracer.clone() {
+                        match tracer {
+                            GethDebugTracerType::BuiltInTracer(tracer) => match tracer {
+                                GethDebugBuiltInTracerType::CallTracer => {
+                                    let call_config = tracer_config.clone()
+                                        .into_call_config()
+                                        .map_err(|e| RpcError::invalid_params(e.to_string()))?;
+                                    self.build_inspector().with_tracing_config(
+                                        TracingInspectorConfig::from_geth_call_config(&call_config),
+                                    )
+                                }
+                                GethDebugBuiltInTracerType::SentioTracer | GethDebugBuiltInTracerType::SentioPrestateTracer => {
+                                    let inspector_cfg = TracingInspectorConfig::default_geth().set_record_logs(true).set_memory_snapshots(true);
+                                    self.build_inspector().with_tracing_config(inspector_cfg)
+                                }
+                                _ => {
+                                    return Err(RpcError::invalid_params("unsupported tracer type").into());
+                                }
+                            },
+                            GethDebugTracerType::JsTracer(_code) => {
+                                return Err(RpcError::invalid_params("unsupported tracer type").into());
+                            }
+                        }
+                    } else {
+                        self.build_inspector().with_tracing_config(TracingInspectorConfig::from_geth_config(&config))
+                    };
+                    let (ResultAndState { result, state }, block_hash) = {
+                        let fee_details = FeeDetails::new(
+                            request.gas_price,
+                            request.max_fee_per_gas,
+                            request.max_priority_fee_per_gas,
+                            request.max_fee_per_blob_gas,
+                        )?;
+                        let env = self.build_call_env(request, fee_details, bundle_block.clone());
+                        let mut evm =
+                            self.new_evm_with_inspector_ref(&cache_db, &env, &mut inspector);
+                        let result = evm.transact(env.tx)?;
+                        let block_hash = evm.db_mut().block_hash(block_number.to::<u64>())?;
+                        drop(evm);
+
+                        (result, block_hash)
+                    };
+                    cache_db.commit(state.clone());
+
+                    let refund = if let ExecutionResult::Success { gas_refunded, .. } = result {
+                        gas_refunded
+                    } else {
+                        0
+                    };
+
+                    let (exit_reason, gas_used, out) = match result.clone() {
+                        ExecutionResult::Success { reason, gas_used, output, .. } => {
+                            (reason.into(), gas_used, Some(output))
+                        }
+                        ExecutionResult::Revert { gas_used, output } => {
+                            (InstructionResult::Revert, gas_used, Some(Output::Call(output)))
+                        }
+                        ExecutionResult::Halt { reason, gas_used } => (op_haltreason_to_instruction_result(reason), gas_used, None),
+                    };
+                    trace!(target: "backend", ?exit_reason, ?out, %gas_used, %block_number, "trace call many");
+
+                    let tracing_inspector = inspector.tracer.expect("tracer disappeared");
+                    let trace: Result<GethTrace, BlockchainError> = if let Some(tracer) = tracer.clone() {
+                        match tracer {
+                            GethDebugTracerType::BuiltInTracer(tracer) => match tracer {
+                                GethDebugBuiltInTracerType::CallTracer => {
+                                    let call_config = tracer_config.clone()
+                                        .into_call_config()
+                                        .map_err(|e| (RpcError::invalid_params(e.to_string())))?;
+                                    Ok(tracing_inspector
+                                        .into_geth_builder()
+                                        .geth_call_traces(call_config, result.gas_used())
+                                        .into())
+                                }
+                                GethDebugBuiltInTracerType::SentioTracer => {
+                                    let sentio_tracer_config = tracer_config.clone()
+                                        .into_sentio_config()
+                                        .map_err(|e| (RpcError::invalid_params(e.to_string())))?;
+
+                                    let receipt = SentioReceipt {
+                                        nonce: Some(nonce.clone()),
+                                        block_number: Some(block_number.to::<U64>()),
+                                        block_hash: Some(block_hash),
+                                        gas_price: Some(U256::from(gas_price.clone())),
+                                        transaction_index: Some(0),
+                                        tx_hash: None,
+                                    };
+                                    let gas_used = result.gas_used();
+                                    Ok(SentioTraceBuilder::new(tracing_inspector.into_traces().into_nodes(), Some(origin.clone()), sentio_tracer_config)
+                                        .sentio_traces(gas_used, refund, Some(receipt))
+                                        .into())
+                                }
+                                GethDebugBuiltInTracerType::SentioPrestateTracer => {
+                                    let sentio_prestate_tracer_config = tracer_config.clone()
+                                        .into_sentio_prestate_config()
+                                        .map_err(|e| (RpcError::invalid_params(e.to_string())))?;
+
+                                    Ok(SentioPrestateTraceBuilder::new(tracing_inspector.into_traces().into_nodes(), sentio_prestate_tracer_config)
+                                        .sentio_prestate_traces(&ResultAndState { result, state }, &cache_db)?
+                                        .into())
+                                }
+                                _ => {
+                                    return Err(RpcError::invalid_params("unsupported tracer type").into());
+                                }
+                            },
+                            GethDebugTracerType::JsTracer(_code) => {
+                                return Err(RpcError::invalid_params("unsupported tracer type").into());
+                            }
+                        }
+                    } else {
+                        let return_value = out.as_ref().map(|o| o.data().clone()).unwrap_or_default();
+                        Ok(tracing_inspector
+                            .into_geth_builder()
+                            .geth_traces(gas_used, return_value, config)
+                            .into())
+                    };
+                    bundle_traces.push(Some(trace?));
+                }
+                traces.push(bundle_traces);
+            }
+            Ok(traces)
+        })
+            .await?
+    }
+
+    pub async fn storage_range_at(
+        &self,
+        // not supported for now, ignored
+        _: TransactionIndex,
+        contract_address: Address,
+        key_start: U256,
+        max_result: usize,
+        block_request: Option<BlockRequest>,
+    ) -> Result<StorageRangeAtResult, BlockchainError> {
+        self.with_database_at(block_request, |db, _| {
+            let db: Option<&HashMap<Address, DbAccount>> = db.maybe_as_full_db();
+            let mut storage_map: StorageMap = StorageMap::new();
+            let mut next_key: Option<B256> = None;
+
+            if let Some(db) = db {
+                if let Some(account) = db.get(&contract_address) {
+                    for key in account.storage.keys().sorted() {
+                        let key_bytes = B256::from(key.to_be_bytes());
+                        let key_sha3 = keccak256(key_bytes);
+                        next_key = Some(key_bytes);
+                        if storage_map.len() >= max_result {
+                            break;
+                        }
+                        if *key >= key_start {
+                            let entry = StorageEntry {
+                                key: key_bytes,
+                                value: B256::from(account.storage[key].to_be_bytes())
+                            };
+                            storage_map.insert(key_sha3, entry);
+                            next_key = None;
+                        }
+                    }
+                }
+                Ok(StorageRangeAtResult {
+                    storage: storage_map,
+                    next_key
+                })
+            } else {
+                Err(BlockchainError::DataUnavailable)
+            }
+        }).await?
     }
 
     pub fn build_access_list_with_state(
@@ -3673,7 +3925,7 @@ pub fn op_haltreason_to_instruction_result(op_reason: OpHaltReason) -> Instructi
 
 #[cfg(test)]
 mod tests {
-    use crate::{NodeConfig, spawn};
+    use crate::{spawn, NodeConfig};
 
     #[tokio::test]
     async fn test_deterministic_block_mining() {

@@ -48,22 +48,13 @@ use alloy_provider::utils::{
     EIP1559_FEE_ESTIMATION_PAST_BLOCKS, EIP1559_FEE_ESTIMATION_REWARD_PERCENTILE,
     eip1559_default_estimator,
 };
-use alloy_rpc_types::{
-    AccessList, AccessListResult, BlockId, BlockNumberOrTag as BlockNumber, BlockTransactions,
-    EIP1186AccountProofResponse, FeeHistory, Filter, FilteredParams, Index, Log, Work,
-    anvil::{
-        ForkedNetwork, Forking, Metadata, MineOptions, NodeEnvironment, NodeForkConfig, NodeInfo,
-    },
-    request::TransactionRequest,
-    simulate::{SimulatePayload, SimulatedBlock},
-    state::{AccountOverride, EvmOverrides, StateOverridesBuilder},
-    trace::{
-        filter::TraceFilter,
-        geth::{GethDebugTracingCallOptions, GethDebugTracingOptions, GethTrace},
-        parity::LocalizedTransactionTrace,
-    },
-    txpool::{TxpoolContent, TxpoolInspect, TxpoolInspectSummary, TxpoolStatus},
-};
+use alloy_rpc_types::{AccessList, AccessListResult, BlockId, BlockNumberOrTag as BlockNumber, BlockTransactions, EIP1186AccountProofResponse, FeeHistory, Filter, FilteredParams, Index, Log, Work, anvil::{
+    ForkedNetwork, Forking, Metadata, MineOptions, NodeEnvironment, NodeForkConfig, NodeInfo,
+}, request::TransactionRequest, simulate::{SimulatePayload, SimulatedBlock}, state::{AccountOverride, EvmOverrides, StateOverridesBuilder}, trace::{
+    filter::TraceFilter,
+    geth::{GethDebugTracingCallOptions, GethDebugTracingOptions, GethTrace},
+    parity::LocalizedTransactionTrace,
+}, txpool::{TxpoolContent, TxpoolInspect, TxpoolInspectSummary, TxpoolStatus}, TransactionIndex};
 use alloy_serde::WithOtherFields;
 use alloy_sol_types::{SolCall, SolValue, sol};
 use alloy_transport::TransportErrorKind;
@@ -96,10 +87,12 @@ use revm::{
     primitives::eip7702::PER_EMPTY_ACCOUNT_COST,
 };
 use std::{sync::Arc, time::Duration};
+use std::ops::Not;
 use tokio::{
     sync::mpsc::{UnboundedReceiver, unbounded_channel},
     try_join,
 };
+use anvil_core::types::{StorageRangeAtResult, TraceCallManyBundle, TraceCallManyContext};
 
 /// The client version: `anvil/v{major}.{minor}.{patch}`
 pub const CLIENT_VERSION: &str = concat!("anvil/v", env!("CARGO_PKG_VERSION"));
@@ -205,6 +198,9 @@ impl EthApi {
             EthRequest::EthBlockNumber(_) => self.block_number().to_rpc_result(),
             EthRequest::EthGetStorageAt(addr, slot, block) => {
                 self.storage_at(addr, slot, block).await.to_rpc_result()
+            }
+            EthRequest::DebugStorageRangeAt(block_hash, tx_index, address, key_start, max_result) => {
+                self.debug_storage_range_at(block_hash, tx_index, address, key_start, max_result).await.to_rpc_result()
             }
             EthRequest::EthGetBlockByHash(hash, full) => {
                 if full {
@@ -334,6 +330,9 @@ impl EthApi {
             EthRequest::DebugTraceCall(tx, block, opts) => {
                 self.debug_trace_call(tx, block, opts).await.to_rpc_result()
             }
+            EthRequest::DebugTraceCallMany(bundle, context, opts) => {
+                self.debug_trace_call_many(bundle, context, opts).await.to_rpc_result()
+            }
             EthRequest::DebugCodeByHash(hash, block) => {
                 self.debug_code_by_hash(hash, block).await.to_rpc_result()
             }
@@ -407,6 +406,7 @@ impl EthApi {
                 .anvil_dump_state(preserve_historical_states.and_then(|s| s.params))
                 .await
                 .to_rpc_result(),
+            EthRequest::DumpStateJson(_) => self.anvil_dump_state_json().await.to_rpc_result(),
             EthRequest::LoadState(buf) => self.anvil_load_state(buf).await.to_rpc_result(),
             EthRequest::NodeInfo(_) => self.anvil_node_info().await.to_rpc_result(),
             EthRequest::AnvilMetadata(_) => self.anvil_metadata().await.to_rpc_result(),
@@ -800,6 +800,28 @@ impl EthApi {
         }
 
         self.backend.storage_at(address, index, Some(block_request)).await
+    }
+
+    pub async fn debug_storage_range_at(
+        &self,
+        block_hash: BlockId,
+        tx_index: TransactionIndex,
+        address: Address,
+        key_start: U256,
+        max_result: usize,
+    ) -> Result<StorageRangeAtResult> {
+        node_info!("debug_storageRangeAt");
+        let block_request = self.block_request(Some(block_hash)).await?;
+
+        // check if the number predates the fork, if in fork mode
+        if let BlockRequest::Number(number) = block_request {
+            if let Some(fork) = self.get_fork() {
+                if fork.predates_fork(number) {
+                    unimplemented!();
+                }
+            }
+        }
+        self.backend.storage_range_at(tx_index, address, key_start, max_result, Some(block_request)).await
     }
 
     /// Returns block with given hash.
@@ -1754,6 +1776,19 @@ impl EthApi {
         result
     }
 
+    pub async fn debug_trace_call_many(
+        &self,
+        bundles: Vec<TraceCallManyBundle>,
+        context: TraceCallManyContext,
+        opts: GethDebugTracingCallOptions,
+    ) -> Result<Vec<Vec<Option<GethTrace>>>> {
+        node_info!("debug_traceCallMany");
+        let block_request = self.block_request(context.block_number).await?;
+        let result: std::result::Result<Vec<Vec<Option<GethTrace>>>, BlockchainError> =
+            self.backend.call_many_with_tracing(bundles, Some(block_request), context.transaction_index, opts).await;
+        result
+    }
+
     /// Returns code by its hash
     ///
     /// Handler for RPC call: `debug_codeByHash`
@@ -2209,6 +2244,20 @@ impl EthApi {
         self.backend.dump_state(preserve_historical_states.unwrap_or(false)).await
     }
 
+    pub async fn anvil_dump_state_json(&self) -> Result<SerializableState> {
+        node_info!("anvil_dumpStateJson");
+        match self.serialized_state(true).await {
+            Ok(mut state) => {
+                // omit traces
+                state.transactions.iter_mut().for_each(|tx| {
+                    tx.info.traces = vec![];
+                });
+                Ok(state)
+            }
+            Err(e) => { Err(e) }
+        }
+    }
+
     /// Returns the current state
     pub async fn serialized_state(
         &self,
@@ -2257,7 +2306,7 @@ impl EthApi {
                     let config = fork.config.read();
 
                     NodeForkConfig {
-                        fork_url: Some(config.eth_rpc_url.clone()),
+                        fork_url: config.eth_rpc_url.contains("sentio").not().then_some(config.eth_rpc_url.clone()),
                         fork_block_number: Some(config.block_number),
                         fork_retry_backoff: Some(config.backoff.as_millis()),
                     }

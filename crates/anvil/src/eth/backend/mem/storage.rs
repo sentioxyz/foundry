@@ -13,10 +13,7 @@ use crate::eth::{
 };
 use alloy_consensus::constants::EMPTY_WITHDRAWALS;
 use alloy_eips::eip7685::EMPTY_REQUESTS_HASH;
-use alloy_primitives::{
-    B256, Bytes, U256,
-    map::{B256HashMap, HashMap},
-};
+use alloy_primitives::{B256, Bytes, U256, map::{B256HashMap, HashMap}, U64};
 use alloy_rpc_types::{
     BlockId, BlockNumberOrTag, TransactionInfo as RethTransactionInfo,
     trace::{
@@ -42,6 +39,9 @@ use foundry_evm::{
 use parking_lot::RwLock;
 use revm::{context::Block as RevmBlock, primitives::hardfork::SpecId};
 use std::{collections::VecDeque, fmt, path::PathBuf, sync::Arc, time::Duration};
+use alloy_rpc_types::trace::geth::sentio::SentioReceipt;
+use revm::bytecode::bitvec::macros::internal::funty::Fundamental;
+use revm_inspectors::tracing::SentioTraceBuilder;
 // use yansi::Paint;
 
 // === various limits in number of blocks ===
@@ -577,10 +577,31 @@ impl MinedTransaction {
                             Err(e) => Err(RpcError::invalid_params(e.to_string()).into()),
                         };
                     }
+                    GethDebugBuiltInTracerType::SentioTracer => {
+                        return match tracer_config.into_sentio_config() {
+                            Ok(sentio_tracer_config) => Ok(SentioTraceBuilder::new(
+                                self.info.traces.clone(),
+                                Some(self.info.from),
+                                sentio_tracer_config,
+                            )
+                                .sentio_traces(self.info.gas_used.as_u64(), 0, Some(SentioReceipt {
+                                    nonce: Some(self.info.nonce),
+                                    tx_hash: Some(self.info.transaction_hash),
+                                    block_number: Some(U64::from(self.block_number)),
+                                    block_hash: Some(self.block_hash),
+                                    transaction_index: Some(self.info.transaction_index),
+                                    gas_price: Some(U256::ZERO), // TODO
+                                }))
+                                .into()),
+                            Err(e) => Err(RpcError::invalid_params(e.to_string()).into()),
+                        }
+                    }
+                    GethDebugBuiltInTracerType::SentioPrestateTracer => todo!(),
                     GethDebugBuiltInTracerType::PreStateTracer
                     | GethDebugBuiltInTracerType::NoopTracer
                     | GethDebugBuiltInTracerType::MuxTracer
-                    | GethDebugBuiltInTracerType::FlatCallTracer => {}
+                    | GethDebugBuiltInTracerType::FlatCallTracer
+                    | GethDebugBuiltInTracerType::SentioRethRawTracer => {}
                 },
                 GethDebugTracerType::JsTracer(_code) => {}
             }
