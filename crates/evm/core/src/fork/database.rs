@@ -15,6 +15,7 @@ use revm::{
     state::{Account, AccountInfo},
 };
 use std::sync::Arc;
+use std::time::SystemTime;
 
 /// a [revm::Database] that's forked off another client
 ///
@@ -177,7 +178,10 @@ impl DatabaseRef for ForkedDatabase {
     type Error = DatabaseError;
 
     fn basic_ref(&self, address: Address) -> Result<Option<AccountInfo>, Self::Error> {
-        self.cache_db.basic_ref(address)
+        let now = SystemTime::now();
+        let ret = self.cache_db.basic_ref(address);
+        info!("basic fetch took: {:?}", now.elapsed().unwrap());
+        ret
     }
 
     fn code_by_hash_ref(&self, code_hash: B256) -> Result<Bytecode, Self::Error> {
@@ -185,7 +189,10 @@ impl DatabaseRef for ForkedDatabase {
     }
 
     fn storage_ref(&self, address: Address, index: U256) -> Result<U256, Self::Error> {
-        DatabaseRef::storage_ref(&self.cache_db, address, index)
+        let now = SystemTime::now();
+        let ret = DatabaseRef::storage_ref(&self.cache_db, address, index);
+        info!("storage fetch took: {:?}", now.elapsed().unwrap());
+        ret
     }
 
     fn block_hash_ref(&self, number: u64) -> Result<B256, Self::Error> {
