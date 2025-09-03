@@ -1,6 +1,6 @@
 # syntax=docker/dockerfile:1.4
 
-FROM alpine:3.18 as build-environment
+FROM alpine:3.22 as build-environment
 
 ARG TARGETARCH
 WORKDIR /opt
@@ -24,7 +24,7 @@ RUN --mount=type=cache,target=/root/.cargo/registry --mount=type=cache,target=/r
     && mv target/release/anvil out/anvil \
     && strip out/anvil;
 
-FROM docker.io/frolvlad/alpine-glibc:alpine-3.16_glibc-2.34 as foundry-client
+FROM alpine:3.22 AS foundry-client
 
 RUN apk add --no-cache linux-headers git
 

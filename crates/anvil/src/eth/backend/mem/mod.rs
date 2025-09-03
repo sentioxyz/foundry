@@ -3032,25 +3032,13 @@ impl Backend {
                         receipt.inner.inner.status()
                     )));
                 }
-                let deviation = (replay_result.gas_used().abs_diff(receipt.gas_used) as f32) / (receipt.gas_used as f32);
                 if replay_result.gas_used() != receipt.gas_used {
-                    // TODO figure out why this happens
-                    // example: 0x68cb8b787985a2e78cfad0e91af9d00a9e5478407bab6f45cc1486aeeb79feec on mainnet
-                    warn!("transaction {} replay gas used: {}, shall be {}, deviation: {:.3}",
+                    return Err(BlockchainError::Internal(format!(
+                        "transaction {} replay gas used mismatch: {}, shall be {}",
                         tx_hash,
                         replay_result.gas_used(),
-                        receipt.gas_used,
-                        deviation
-                    );
-                    if deviation > 0.05 {
-                        return Err(BlockchainError::Internal(format!(
-                            "transaction {} replay gas used mismatch: {}, shall be {}, deviation: {:.3}",
-                            tx_hash,
-                            replay_result.gas_used(),
-                            receipt.gas_used,
-                            deviation
-                        )));
-                    }
+                        receipt.gas_used
+                    )));
                 }
             }
         }
@@ -3076,6 +3064,7 @@ impl Backend {
             nonce: Some(tx.nonce()),
             transaction_type: Some(tx.tx_type().into()),
             authorization_list: tx.authorization_list().map(|auth_list| auth_list.to_vec()),
+            access_list: tx.access_list().map(|list| list.clone()),
             ..Default::default()
         })
     }
