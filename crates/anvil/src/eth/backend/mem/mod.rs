@@ -2123,31 +2123,36 @@ impl Backend {
                     let nonce = &request.nonce.unwrap_or(0);
                     let gas_price = &request.gas_price.unwrap_or(0);
 
-                    let mut inspector = if let Some(tracer) = tracer.clone() {
-                        match tracer {
-                            GethDebugTracerType::BuiltInTracer(tracer) => match tracer {
-                                GethDebugBuiltInTracerType::CallTracer => {
-                                    let call_config = tracer_config.clone()
-                                        .into_call_config()
-                                        .map_err(|e| RpcError::invalid_params(e.to_string()))?;
-                                    self.build_inspector().with_tracing_config(
-                                        TracingInspectorConfig::from_geth_call_config(&call_config),
-                                    )
-                                }
-                                GethDebugBuiltInTracerType::SentioTracer | GethDebugBuiltInTracerType::SentioPrestateTracer => {
-                                    let inspector_cfg = TracingInspectorConfig::default_geth().set_record_logs(true).set_memory_snapshots(true);
-                                    self.build_inspector().with_tracing_config(inspector_cfg)
-                                }
-                                _ => {
+                    let tracer_enabled = tx_idx >= bundle.tracer_start_index;
+                    let mut inspector = if tracer_enabled {
+                        if let Some(tracer) = tracer.clone() {
+                            match tracer {
+                                GethDebugTracerType::BuiltInTracer(tracer) => match tracer {
+                                    GethDebugBuiltInTracerType::CallTracer => {
+                                        let call_config = tracer_config.clone()
+                                            .into_call_config()
+                                            .map_err(|e| RpcError::invalid_params(e.to_string()))?;
+                                        self.build_inspector().with_tracing_config(
+                                            TracingInspectorConfig::from_geth_call_config(&call_config),
+                                        )
+                                    }
+                                    GethDebugBuiltInTracerType::SentioTracer | GethDebugBuiltInTracerType::SentioPrestateTracer => {
+                                        let inspector_cfg = TracingInspectorConfig::default_geth().set_record_logs(true).set_memory_snapshots(true);
+                                        self.build_inspector().with_tracing_config(inspector_cfg)
+                                    }
+                                    _ => {
+                                        return Err(RpcError::invalid_params("unsupported tracer type").into());
+                                    }
+                                },
+                                GethDebugTracerType::JsTracer(_code) => {
                                     return Err(RpcError::invalid_params("unsupported tracer type").into());
                                 }
-                            },
-                            GethDebugTracerType::JsTracer(_code) => {
-                                return Err(RpcError::invalid_params("unsupported tracer type").into());
                             }
+                        } else {
+                            self.build_inspector().with_tracing_config(TracingInspectorConfig::from_geth_config(&config))
                         }
                     } else {
-                        self.build_inspector().with_tracing_config(TracingInspectorConfig::from_geth_config(&config))
+                        AnvilInspector::default()
                     };
                     let (ResultAndState { result, state }, block_hash) = {
                         let fee_details = FeeDetails::new(
@@ -2184,60 +2189,64 @@ impl Backend {
                     };
                     trace!(target: "backend", ?exit_reason, ?out, %gas_used, %block_number, "trace call many");
 
-                    let tracing_inspector = inspector.tracer.expect("tracer disappeared");
-                    let trace: Result<GethTrace, BlockchainError> = if let Some(tracer) = tracer.clone() {
-                        match tracer {
-                            GethDebugTracerType::BuiltInTracer(tracer) => match tracer {
-                                GethDebugBuiltInTracerType::CallTracer => {
-                                    let call_config = tracer_config.clone()
-                                        .into_call_config()
-                                        .map_err(|e| (RpcError::invalid_params(e.to_string())))?;
-                                    Ok(tracing_inspector
-                                        .into_geth_builder()
-                                        .geth_call_traces(call_config, result.gas_used())
-                                        .into())
-                                }
-                                GethDebugBuiltInTracerType::SentioTracer => {
-                                    let sentio_tracer_config = tracer_config.clone()
-                                        .into_sentio_config()
-                                        .map_err(|e| (RpcError::invalid_params(e.to_string())))?;
+                    let trace: Result<GethTrace, BlockchainError> = if tracer_enabled {
+                        let tracing_inspector = inspector.tracer.expect("tracer disappeared");
+                        if let Some(tracer) = tracer.clone() {
+                            match tracer {
+                                GethDebugTracerType::BuiltInTracer(tracer) => match tracer {
+                                    GethDebugBuiltInTracerType::CallTracer => {
+                                        let call_config = tracer_config.clone()
+                                            .into_call_config()
+                                            .map_err(|e| (RpcError::invalid_params(e.to_string())))?;
+                                        Ok(tracing_inspector
+                                            .into_geth_builder()
+                                            .geth_call_traces(call_config, result.gas_used())
+                                            .into())
+                                    }
+                                    GethDebugBuiltInTracerType::SentioTracer => {
+                                        let sentio_tracer_config = tracer_config.clone()
+                                            .into_sentio_config()
+                                            .map_err(|e| (RpcError::invalid_params(e.to_string())))?;
 
-                                    let receipt = SentioReceipt {
-                                        nonce: Some(nonce.clone()),
-                                        block_number: Some(block_number.to::<U64>()),
-                                        block_hash: Some(block_hash),
-                                        gas_price: Some(U256::from(gas_price.clone())),
-                                        transaction_index: Some(0),
-                                        tx_hash: None,
-                                    };
-                                    let gas_used = result.gas_used();
-                                    Ok(SentioTraceBuilder::new(tracing_inspector.into_traces().into_nodes(), Some(origin.clone()), sentio_tracer_config)
-                                        .sentio_traces(gas_used, refund, Some(receipt))
-                                        .into())
-                                }
-                                GethDebugBuiltInTracerType::SentioPrestateTracer => {
-                                    let sentio_prestate_tracer_config = tracer_config.clone()
-                                        .into_sentio_prestate_config()
-                                        .map_err(|e| (RpcError::invalid_params(e.to_string())))?;
+                                        let receipt = SentioReceipt {
+                                            nonce: Some(nonce.clone()),
+                                            block_number: Some(block_number.to::<U64>()),
+                                            block_hash: Some(block_hash),
+                                            gas_price: Some(U256::from(gas_price.clone())),
+                                            transaction_index: Some(0),
+                                            tx_hash: None,
+                                        };
+                                        let gas_used = result.gas_used();
+                                        Ok(SentioTraceBuilder::new(tracing_inspector.into_traces().into_nodes(), Some(origin.clone()), sentio_tracer_config)
+                                            .sentio_traces(gas_used, refund, Some(receipt))
+                                            .into())
+                                    }
+                                    GethDebugBuiltInTracerType::SentioPrestateTracer => {
+                                        let sentio_prestate_tracer_config = tracer_config.clone()
+                                            .into_sentio_prestate_config()
+                                            .map_err(|e| (RpcError::invalid_params(e.to_string())))?;
 
-                                    Ok(SentioPrestateTraceBuilder::new(tracing_inspector.into_traces().into_nodes(), sentio_prestate_tracer_config)
-                                        .sentio_prestate_traces(&ResultAndState { result: result.clone(), state }, &cache_db)?
-                                        .into())
-                                }
-                                _ => {
+                                        Ok(SentioPrestateTraceBuilder::new(tracing_inspector.into_traces().into_nodes(), sentio_prestate_tracer_config)
+                                            .sentio_prestate_traces(&ResultAndState { result: result.clone(), state }, &cache_db)?
+                                            .into())
+                                    }
+                                    _ => {
+                                        return Err(RpcError::invalid_params("unsupported tracer type").into());
+                                    }
+                                },
+                                GethDebugTracerType::JsTracer(_code) => {
                                     return Err(RpcError::invalid_params("unsupported tracer type").into());
                                 }
-                            },
-                            GethDebugTracerType::JsTracer(_code) => {
-                                return Err(RpcError::invalid_params("unsupported tracer type").into());
                             }
+                        } else {
+                            let return_value = out.as_ref().map(|o| o.data().clone()).unwrap_or_default();
+                            Ok(tracing_inspector
+                                .into_geth_builder()
+                                .geth_traces(gas_used, return_value, config)
+                                .into())
                         }
                     } else {
-                        let return_value = out.as_ref().map(|o| o.data().clone()).unwrap_or_default();
-                        Ok(tracing_inspector
-                            .into_geth_builder()
-                            .geth_traces(gas_used, return_value, config)
-                            .into())
+                        Ok(GethTrace::default())
                     };
                     info!("trace call #{} in bundle #{} completed, elapsed: {:?}", tx_idx, bundle_idx, start.elapsed().unwrap());
                     bundle_traces.push(Some((trace?, result.clone())));
@@ -2944,7 +2953,7 @@ impl Backend {
                 gas_limit: Some(block.header.gas_limit),
                 coinbase: Some(block.header.beneficiary),
                 random: block.header.mix_hash,
-                base_fee: Some(U256::from(block.header.base_fee_per_gas.unwrap())),
+                base_fee: block.header.base_fee_per_gas.map(|f| U256::from(f)),
                 block_hash: None,
             };
 
@@ -2992,15 +3001,17 @@ impl Backend {
             transactions: transactions
                 .iter().map(|tx| Self::rpc_tx_to_request(tx)).collect(),
             block_override,
+            tracer_start_index: transactions.len() - 1,
         };
         let results = &self.call_many_with_tracing(
             vec![bundle],
             Some(BlockRequest::Number(block_number - 1)),
-            TransactionIndex::Index(0),
+            TransactionIndex::All,
             opts.tracing_call_options
         ).await?[0];
 
         if opts.force_replay_validation {
+            info!("validating {} replayed transaction results against receipts", transactions.len());
             let mut receipt_map: std::collections::HashMap<TxHash, AnyTransactionReceipt> = std::collections::HashMap::new();
             if transactions.len() == 1 {
                 let hash = transactions[0].inner.inner.as_envelope().unwrap().hash();
@@ -3047,26 +3058,53 @@ impl Backend {
 
     fn rpc_tx_to_request(tx: &AnyRpcTransaction) -> WithOtherFields<TransactionRequest> {
         let recovered_tx = &tx.inner.inner;
-        let tx = recovered_tx.as_envelope().unwrap();
-        WithOtherFields::from(TransactionRequest {
-            from: Some(recovered_tx.signer()),
-            to: tx.to().map(|addr| TxKind::Call(addr)).or(Some(TxKind::Create)),
-            gas_price: tx.gas_price(),
-            max_fee_per_gas: Some(tx.max_fee_per_gas()),
-            max_priority_fee_per_gas: tx.max_priority_fee_per_gas(),
-            max_fee_per_blob_gas: tx.max_fee_per_blob_gas(),
-            gas: Some(tx.gas_limit()),
-            value: Some(tx.value()),
-            input: TransactionInput {
-                input: Some(tx.input().clone()),
-                data: None,
-            },
-            nonce: Some(tx.nonce()),
-            transaction_type: Some(tx.tx_type().into()),
-            authorization_list: tx.authorization_list().map(|auth_list| auth_list.to_vec()),
-            access_list: tx.access_list().map(|list| list.clone()),
-            ..Default::default()
-        })
+        let tx = recovered_tx.as_envelope();
+        if let Some(tx) = tx {
+            WithOtherFields::from(TransactionRequest {
+                from: Some(recovered_tx.signer()),
+                to: tx.to().map(|addr| TxKind::Call(addr)).or(Some(TxKind::Create)),
+                gas_price: tx.gas_price(),
+                max_fee_per_gas: Some(tx.max_fee_per_gas()),
+                max_priority_fee_per_gas: tx.max_priority_fee_per_gas(),
+                max_fee_per_blob_gas: tx.max_fee_per_blob_gas(),
+                gas: Some(tx.gas_limit()),
+                value: Some(tx.value()),
+                input: TransactionInput {
+                    input: Some(tx.input().clone()),
+                    data: None,
+                },
+                nonce: Some(tx.nonce()),
+                transaction_type: Some(tx.tx_type().into()),
+                authorization_list: tx.authorization_list().map(|auth_list| auth_list.to_vec()),
+                access_list: tx.access_list().map(|list| list.clone()),
+                ..Default::default()
+            })
+        } else {
+            if let Some(tx) = recovered_tx.as_unknown() {
+                WithOtherFields::from(TransactionRequest {
+                    from: Some(recovered_tx.signer()),
+                    to: tx.to().map(|addr| TxKind::Call(addr)).or(Some(TxKind::Create)),
+                    gas_price: tx.gas_price(),
+                    max_fee_per_gas: Some(tx.max_fee_per_gas()),
+                    max_priority_fee_per_gas: tx.max_priority_fee_per_gas(),
+                    max_fee_per_blob_gas: tx.max_fee_per_blob_gas(),
+                    gas: Some(tx.gas_limit()),
+                    value: Some(tx.value()),
+                    input: TransactionInput {
+                        input: Some(tx.input().clone()),
+                        data: None,
+                    },
+                    nonce: Some(tx.nonce()),
+                    transaction_type: Some(tx.ty()),
+                    authorization_list: tx.authorization_list().map(|auth_list| auth_list.to_vec()),
+                    access_list: tx.access_list().map(|list| list.clone()),
+                    ..Default::default()
+                })
+            } else {
+                panic!("unsupported transaction type for replay {}", recovered_tx.as_unknown().unwrap().hash);
+            }
+        }
+
     }
 
     /// Traces the transaction with the js tracer

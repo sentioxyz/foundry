@@ -27,7 +27,9 @@ pub enum TransactionData {
 #[serde(rename_all = "camelCase")]
 pub struct TraceCallManyBundle {
     pub transactions: Vec<WithOtherFields<TransactionRequest>>,
-    pub block_override: Option<BlockOverrides>
+    pub block_override: Option<BlockOverrides>,
+    #[serde(default)]
+    pub tracer_start_index: usize
 }
 
 #[derive(Clone, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]
