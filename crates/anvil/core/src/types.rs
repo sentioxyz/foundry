@@ -2,6 +2,7 @@ use std::collections::HashMap;
 use alloy_eips::BlockId;
 use alloy_primitives::{Bytes, B256};
 use alloy_rpc_types::{BlockOverrides, TransactionIndex, TransactionRequest};
+use alloy_rpc_types::trace::geth::GethDebugTracingCallOptions;
 use alloy_serde::WithOtherFields;
 use serde::{Deserialize, Serialize};
 
@@ -51,4 +52,17 @@ pub type StorageMap = HashMap<B256, StorageEntry>;
 pub struct StorageEntry {
     pub key: B256,
     pub value: B256
+}
+
+#[derive(Clone, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct DebugTraceTransactionOpts {
+    #[serde(flatten)]
+    pub tracing_call_options: GethDebugTracingCallOptions,
+    #[serde(default)]
+    pub force_replay: bool,
+    #[serde(default)]
+    pub force_replay_preceding: bool,
+    #[serde(default)]
+    pub force_replay_validation: bool,
 }

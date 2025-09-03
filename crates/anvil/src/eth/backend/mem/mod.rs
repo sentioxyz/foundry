@@ -41,17 +41,14 @@ use alloy_consensus::{
     Transaction as TransactionTrait,
     TxEnvelope,
 };
-use alloy_eips::{eip1559::BaseFeeParams, eip4844::kzg_to_versioned_hash, eip7840::BlobParams};
+use alloy_eips::{eip1559::BaseFeeParams, eip4844::kzg_to_versioned_hash, eip7840::BlobParams, RpcBlockHash, Typed2718};
 use alloy_evm::{
     eth::EthEvmContext, overrides::{apply_state_overrides, OverrideBlockHashes},
     precompiles::{DynPrecompile, Precompile, PrecompilesMap},
     Database,
     Evm,
 };
-use alloy_network::{
-    AnyHeader, AnyRpcBlock, AnyRpcHeader, AnyRpcTransaction, AnyTxEnvelope, AnyTxType,
-    EthereumWallet, UnknownTxEnvelope, UnknownTypedTransaction,
-};
+use alloy_network::{AnyHeader, AnyRpcBlock, AnyRpcHeader, AnyRpcTransaction, AnyTransactionReceipt, AnyTxEnvelope, AnyTxType, EthereumWallet, UnknownTxEnvelope, UnknownTypedTransaction};
 use alloy_primitives::{
     address, hex, keccak256, logs_bloom, map::HashMap, utils::Unit, Address, Bytes, TxHash, TxKind, B256,
     U256, U64,
@@ -64,7 +61,7 @@ use alloy_rpc_types::{anvil::Forking, request::TransactionRequest, serde_helpers
         GethDebugTracingOptions, GethTrace, NoopFrame,
     },
     parity::LocalizedTransactionTrace,
-}, AccessList, Block as AlloyBlock, BlockId, BlockNumberOrTag as BlockNumber, BlockTransactions, EIP1186AccountProofResponse as AccountProof, EIP1186StorageProof as StorageProof, Filter, Header as AlloyHeader, Index, Log, Transaction, TransactionIndex, TransactionReceipt};
+}, AccessList, Block as AlloyBlock, BlockId, BlockNumberOrTag as BlockNumber, BlockOverrides, BlockTransactions, EIP1186AccountProofResponse as AccountProof, EIP1186StorageProof as StorageProof, Filter, Header as AlloyHeader, Index, Log, Transaction, TransactionIndex, TransactionInput, TransactionReceipt};
 use alloy_serde::{OtherFields, WithOtherFields};
 use alloy_signer::Signature;
 use alloy_signer_local::PrivateKeySigner;
@@ -78,7 +75,7 @@ use anvil_core::eth::{
     },
     wallet::{Capabilities, DelegationCapability, WalletCapabilities},
 };
-use anvil_core::types::{StorageEntry, StorageMap, StorageRangeAtResult, TraceCallManyBundle};
+use anvil_core::types::{DebugTraceTransactionOpts, StorageEntry, StorageMap, StorageRangeAtResult, TraceCallManyBundle};
 use anvil_rpc::error::RpcError;
 use chrono::Datelike;
 use eyre::{Context, Result};
@@ -99,7 +96,6 @@ use op_revm::{
     transaction::deposit::DepositTransactionParts, OpContext, OpHaltReason, OpTransaction,
 };
 use parking_lot::{Mutex, RwLock};
-use revm::context::Transaction as OtherTransaction;
 use revm::database::DbAccount;
 use revm::{context::{Block as RevmBlock, BlockEnv, TxEnv}, context_interface::{
     block::BlobExcessGasAndPrice,
@@ -115,6 +111,10 @@ use std::{
     sync::Arc,
     time::Duration,
 };
+use std::time::SystemTime;
+use alloy_provider::Provider;
+use alloy_transport::TransportErrorKind;
+use revm::context::TransactionType;
 use storage::{Blockchain, MinedTransaction, DEFAULT_HISTORY_LIMIT};
 use tokio::sync::RwLock as AsyncRwLock;
 
@@ -2092,27 +2092,33 @@ impl Backend {
         // transaction_index not supported for now, ignored
         _: TransactionIndex,
         opts: GethDebugTracingCallOptions,
-    ) -> Result<Vec<Vec<Option<GethTrace>>>, BlockchainError> {
+    ) -> Result<Vec<Vec<Option<(GethTrace, ExecutionResult<OpHaltReason>)>>>, BlockchainError> {
         let GethDebugTracingCallOptions { tracing_options, block_overrides: _, state_overrides } =
             opts;
         let GethDebugTracingOptions { config, tracer, tracer_config, .. } = tracing_options;
 
-        self.with_database_at(block_request, |state, mut block| {
+        self.with_database_at(block_request, |state, block| {
             let mut cache_db = CacheDB::new(state);
             if let Some(state_overrides) = state_overrides {
                 apply_state_overrides(state_overrides, &mut cache_db)?;
             }
 
-            let mut traces: Vec<Vec<Option<GethTrace>>> = vec![];
-            for bundle in bundles {
-                let bundle_block = block.clone();
-                if let Some(block_overrides) = bundle.block_override {
-                    cache_db.apply_block_overrides(block_overrides, &mut block);
+            let mut traces: Vec<Vec<Option<(GethTrace, ExecutionResult<OpHaltReason>)>>> = vec![];
+            for (bundle_idx, bundle) in bundles.iter().enumerate() {
+                let mut bundle_block = block.clone();
+                if let Some(block_overrides) = bundle.block_override.clone() {
+                    cache_db.apply_block_overrides(block_overrides, &mut bundle_block);
                 }
                 let block_number = bundle_block.number;
 
-                let mut bundle_traces: Vec<Option<GethTrace>> = vec![];
-                for request in bundle.transactions {
+                let mut bundle_traces: Vec<Option<(GethTrace, ExecutionResult<OpHaltReason>)>> = vec![];
+                for (tx_idx, request) in bundle.transactions.clone().into_iter().enumerate() {
+                    if request.transaction_type.unwrap() == TransactionType::Eip4844 {
+                        // skip blob tx
+                        bundle_traces.push(None);
+                        continue;
+                    }
+                    let start = SystemTime::now();
                     let origin = &request.from.unwrap_or_default();
                     let nonce = &request.nonce.unwrap_or(0);
                     let gas_price = &request.gas_price.unwrap_or(0);
@@ -2215,7 +2221,7 @@ impl Backend {
                                         .map_err(|e| (RpcError::invalid_params(e.to_string())))?;
 
                                     Ok(SentioPrestateTraceBuilder::new(tracing_inspector.into_traces().into_nodes(), sentio_prestate_tracer_config)
-                                        .sentio_prestate_traces(&ResultAndState { result, state }, &cache_db)?
+                                        .sentio_prestate_traces(&ResultAndState { result: result.clone(), state }, &cache_db)?
                                         .into())
                                 }
                                 _ => {
@@ -2233,7 +2239,8 @@ impl Backend {
                             .geth_traces(gas_used, return_value, config)
                             .into())
                     };
-                    bundle_traces.push(Some(trace?));
+                    info!("trace call #{} in bundle #{} completed, elapsed: {:?}", tx_idx, bundle_idx, start.elapsed().unwrap());
+                    bundle_traces.push(Some((trace?, result.clone())));
                 }
                 traces.push(bundle_traces);
             }
@@ -2892,7 +2899,7 @@ impl Backend {
     pub async fn debug_trace_transaction(
         &self,
         hash: B256,
-        opts: GethDebugTracingOptions,
+        opts: DebugTraceTransactionOpts,
     ) -> Result<GethTrace, BlockchainError> {
         #[cfg(feature = "js-tracer")]
         if let Some(tracer_type) = opts.tracer.as_ref()
@@ -2903,15 +2910,174 @@ impl Backend {
                 .await;
         }
 
-        if let Some(trace) = self.mined_geth_trace_transaction(hash, opts.clone()) {
+        if let Some(trace) = self.mined_geth_trace_transaction(
+            hash, opts.tracing_call_options.tracing_options.clone()) {
             return trace;
         }
 
         if let Some(fork) = self.get_fork() {
-            return Ok(fork.debug_trace_transaction(hash, opts).await?);
-        }
+            if !opts.force_replay {
+                return Ok(fork.debug_trace_transaction(hash, opts.tracing_call_options.tracing_options).await?);
+            }
 
-        Ok(GethTrace::Default(Default::default()))
+            let provider = fork.provider();
+            let trace_tx = provider.get_transaction_by_hash(hash).await?;
+            if trace_tx.is_none() {
+                return Err(TransportErrorKind::custom_str(
+                    format!("transaction not found: {hash}").as_str(),
+                ).into());
+            }
+            let trace_tx = trace_tx.unwrap();
+            let trace_tx_idx = trace_tx.transaction_index.unwrap() as usize;
+            let block_hash = trace_tx.block_hash.unwrap();
+            let block = provider.get_block_by_hash(block_hash).full().await?;
+            if block.is_none() {
+                return Err(TransportErrorKind::custom_str(
+                    format!("block not found: {block_hash}").as_str(),
+                ).into());
+            }
+            let block = block.unwrap();
+            let block_overrides = BlockOverrides {
+                number: Some(U256::from(block.number())),
+                difficulty: Some(block.header.difficulty),
+                time: Some(block.header.timestamp),
+                gas_limit: Some(block.header.gas_limit),
+                coinbase: Some(block.header.beneficiary),
+                random: block.header.mix_hash,
+                base_fee: Some(U256::from(block.header.base_fee_per_gas.unwrap())),
+                block_hash: None,
+            };
+
+            info!("resetting block number to {} for replay", block.number() - 1);
+            let rpc_url = self.node_config.read().await.eth_rpc_url.clone().unwrap();
+            self.reset_block_number(rpc_url, block.number() - 1).await?;
+
+            if !opts.force_replay_preceding {
+                // try replay only 1 tx first
+                let ret = self.replay_bundle_last_tx(
+                    [trace_tx].as_slice(),
+                    Some(block_overrides.clone()),
+                    DebugTraceTransactionOpts {
+                        force_replay_validation: true,
+                        ..opts.clone()
+                    }
+                ).await;
+                match &ret {
+                    Ok(_) => return ret,
+                    Err(err) => warn!("simple replay {} failed with error {}, try again with preceding transactions", hash, err),
+                }
+            }
+            let txs = match &block.transactions {
+                BlockTransactions::Full(txs) => txs,
+                _ => {
+                    return Err(BlockchainError::Internal("cannot retrieve block transactions".to_string()))
+                }
+            };
+            return self.replay_bundle_last_tx(&txs[..trace_tx_idx+1], Some(block_overrides), opts).await;
+        }
+        Err(BlockchainError::Internal("no fork".to_string()))
+    }
+
+    async fn replay_bundle_last_tx(
+        &self,
+        transactions: &[AnyRpcTransaction],
+        block_override: Option<BlockOverrides>,
+        opts: DebugTraceTransactionOpts,
+    ) -> Result<GethTrace, BlockchainError> {
+        let provider = self.get_fork().unwrap().provider();
+        let block_number = transactions[0].block_number.unwrap();
+        let block_hash = transactions[0].block_hash.unwrap();
+
+        let bundle = TraceCallManyBundle {
+            transactions: transactions
+                .iter().map(|tx| Self::rpc_tx_to_request(tx)).collect(),
+            block_override,
+        };
+        let results = &self.call_many_with_tracing(
+            vec![bundle],
+            Some(BlockRequest::Number(block_number - 1)),
+            TransactionIndex::Index(0),
+            opts.tracing_call_options
+        ).await?[0];
+
+        if opts.force_replay_validation {
+            let mut receipt_map: std::collections::HashMap<TxHash, AnyTransactionReceipt> = std::collections::HashMap::new();
+            if transactions.len() == 1 {
+                let hash = transactions[0].inner.inner.as_envelope().unwrap().hash();
+                let receipt = provider.get_transaction_receipt(*hash).await?.unwrap();
+                receipt_map.insert(*hash, receipt);
+            } else {
+                let block_receipts = provider.get_block_receipts(BlockId::Hash(RpcBlockHash {
+                    block_hash,
+                    require_canonical: None,
+                })).await?;
+                let block_receipts = block_receipts.unwrap();
+                for receipt in &block_receipts {
+                    receipt_map.insert(receipt.transaction_hash, receipt.clone());
+                }
+            }
+
+            for (i, trace) in results.iter().enumerate() {
+                if transactions[i].is_eip4844() {
+                    continue;
+                }
+                let tx_hash = transactions[i].inner.inner.as_envelope().unwrap().hash();
+                let receipt = receipt_map.get(tx_hash).unwrap();
+                let (_, replay_result) = trace.clone().unwrap();
+                if replay_result.is_success() != receipt.inner.inner.status() {
+                    return Err(BlockchainError::Internal(format!(
+                        "transaction {} replay status mismatch: {}, shall be {}",
+                        tx_hash,
+                        replay_result.is_success(),
+                        receipt.inner.inner.status()
+                    )));
+                }
+                let deviation = (replay_result.gas_used().abs_diff(receipt.gas_used) as f32) / (receipt.gas_used as f32);
+                if replay_result.gas_used() != receipt.gas_used {
+                    // TODO figure out why this happens
+                    // example: 0x68cb8b787985a2e78cfad0e91af9d00a9e5478407bab6f45cc1486aeeb79feec on mainnet
+                    warn!("transaction {} replay gas used: {}, shall be {}, deviation: {:.3}",
+                        tx_hash,
+                        replay_result.gas_used(),
+                        receipt.gas_used,
+                        deviation
+                    );
+                    if deviation > 0.05 {
+                        return Err(BlockchainError::Internal(format!(
+                            "transaction {} replay gas used mismatch: {}, shall be {}, deviation: {:.3}",
+                            tx_hash,
+                            replay_result.gas_used(),
+                            receipt.gas_used,
+                            deviation
+                        )));
+                    }
+                }
+            }
+        }
+        Ok(results.last().unwrap().clone().unwrap().0)
+    }
+
+    fn rpc_tx_to_request(tx: &AnyRpcTransaction) -> WithOtherFields<TransactionRequest> {
+        let recovered_tx = &tx.inner.inner;
+        let tx = recovered_tx.as_envelope().unwrap();
+        WithOtherFields::from(TransactionRequest {
+            from: Some(recovered_tx.signer()),
+            to: tx.to().map(|addr| TxKind::Call(addr)).or(Some(TxKind::Create)),
+            gas_price: tx.gas_price(),
+            max_fee_per_gas: Some(tx.max_fee_per_gas()),
+            max_priority_fee_per_gas: tx.max_priority_fee_per_gas(),
+            max_fee_per_blob_gas: tx.max_fee_per_blob_gas(),
+            gas: Some(tx.gas_limit()),
+            value: Some(tx.value()),
+            input: TransactionInput {
+                input: Some(tx.input().clone()),
+                data: None,
+            },
+            nonce: Some(tx.nonce()),
+            transaction_type: Some(tx.tx_type().into()),
+            authorization_list: tx.authorization_list().map(|auth_list| auth_list.to_vec()),
+            ..Default::default()
+        })
     }
 
     /// Traces the transaction with the js tracer

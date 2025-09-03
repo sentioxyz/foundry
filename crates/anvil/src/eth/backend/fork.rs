@@ -154,7 +154,7 @@ impl ClientFork {
         self.config.read().chain_id
     }
 
-    fn provider(&self) -> Arc<RetryProvider> {
+    pub(crate) fn provider(&self) -> Arc<RetryProvider> {
         self.config.read().provider.clone()
     }
 

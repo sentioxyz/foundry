@@ -52,7 +52,7 @@ use alloy_rpc_types::{AccessList, AccessListResult, BlockId, BlockNumberOrTag as
     ForkedNetwork, Forking, Metadata, MineOptions, NodeEnvironment, NodeForkConfig, NodeInfo,
 }, request::TransactionRequest, simulate::{SimulatePayload, SimulatedBlock}, state::{AccountOverride, EvmOverrides, StateOverridesBuilder}, trace::{
     filter::TraceFilter,
-    geth::{GethDebugTracingCallOptions, GethDebugTracingOptions, GethTrace},
+    geth::{GethDebugTracingCallOptions, GethTrace},
     parity::LocalizedTransactionTrace,
 }, txpool::{TxpoolContent, TxpoolInspect, TxpoolInspectSummary, TxpoolStatus}, TransactionIndex};
 use alloy_serde::WithOtherFields;
@@ -88,11 +88,13 @@ use revm::{
 };
 use std::{sync::Arc, time::Duration};
 use std::ops::Not;
+use op_revm::OpHaltReason;
+use revm::context::result::ExecutionResult;
 use tokio::{
     sync::mpsc::{UnboundedReceiver, unbounded_channel},
     try_join,
 };
-use anvil_core::types::{StorageRangeAtResult, TraceCallManyBundle, TraceCallManyContext};
+use anvil_core::types::{DebugTraceTransactionOpts, StorageRangeAtResult, TraceCallManyBundle, TraceCallManyContext};
 
 /// The client version: `anvil/v{major}.{minor}.{patch}`
 pub const CLIENT_VERSION: &str = concat!("anvil/v", env!("CARGO_PKG_VERSION"));
@@ -1746,7 +1748,7 @@ impl EthApi {
     pub async fn debug_trace_transaction(
         &self,
         tx_hash: B256,
-        opts: GethDebugTracingOptions,
+        opts: DebugTraceTransactionOpts,
     ) -> Result<GethTrace> {
         node_info!("debug_traceTransaction");
         self.backend.debug_trace_transaction(tx_hash, opts).await
@@ -1784,9 +1786,13 @@ impl EthApi {
     ) -> Result<Vec<Vec<Option<GethTrace>>>> {
         node_info!("debug_traceCallMany");
         let block_request = self.block_request(context.block_number).await?;
-        let result: std::result::Result<Vec<Vec<Option<GethTrace>>>, BlockchainError> =
+        let result: std::result::Result<Vec<Vec<Option<(GethTrace, ExecutionResult<OpHaltReason>)>>>, BlockchainError> =
             self.backend.call_many_with_tracing(bundles, Some(block_request), context.transaction_index, opts).await;
-        result
+        match result {
+            Ok(traces) => Ok(traces.into_iter().map(|v|
+                v.into_iter().map(|opt| opt.map(|(trace, _)| trace)).collect()).collect()),
+            Err(e) => Err(e),
+        }
     }
 
     /// Returns code by its hash
