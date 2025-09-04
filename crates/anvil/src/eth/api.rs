@@ -1783,14 +1783,14 @@ impl EthApi {
         bundles: Vec<TraceCallManyBundle>,
         context: TraceCallManyContext,
         opts: GethDebugTracingCallOptions,
-    ) -> Result<Vec<Vec<Option<GethTrace>>>> {
+    ) -> Result<Vec<Vec<GethTrace>>> {
         node_info!("debug_traceCallMany");
         let block_request = self.block_request(context.block_number).await?;
-        let result: std::result::Result<Vec<Vec<Option<(GethTrace, ExecutionResult<OpHaltReason>)>>>, BlockchainError> =
+        let result: std::result::Result<Vec<Vec<(GethTrace, ExecutionResult<OpHaltReason>)>>, BlockchainError> =
             self.backend.call_many_with_tracing(bundles, Some(block_request), context.transaction_index, opts).await;
         match result {
             Ok(traces) => Ok(traces.into_iter().map(|v|
-                v.into_iter().map(|opt| opt.map(|(trace, _)| trace)).collect()).collect()),
+                v.into_iter().map(|opt| opt.0).collect()).collect()),
             Err(e) => Err(e),
         }
     }

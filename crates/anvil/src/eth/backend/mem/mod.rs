@@ -114,7 +114,6 @@ use std::{
 use std::time::SystemTime;
 use alloy_provider::Provider;
 use alloy_transport::TransportErrorKind;
-use revm::context::TransactionType;
 use storage::{Blockchain, MinedTransaction, DEFAULT_HISTORY_LIMIT};
 use tokio::sync::RwLock as AsyncRwLock;
 
@@ -2092,7 +2091,7 @@ impl Backend {
         // transaction_index not supported for now, ignored
         _: TransactionIndex,
         opts: GethDebugTracingCallOptions,
-    ) -> Result<Vec<Vec<Option<(GethTrace, ExecutionResult<OpHaltReason>)>>>, BlockchainError> {
+    ) -> Result<Vec<Vec<(GethTrace, ExecutionResult<OpHaltReason>)>>, BlockchainError> {
         let GethDebugTracingCallOptions { tracing_options, block_overrides: _, state_overrides } =
             opts;
         let GethDebugTracingOptions { config, tracer, tracer_config, .. } = tracing_options;
@@ -2103,7 +2102,7 @@ impl Backend {
                 apply_state_overrides(state_overrides, &mut cache_db)?;
             }
 
-            let mut traces: Vec<Vec<Option<(GethTrace, ExecutionResult<OpHaltReason>)>>> = vec![];
+            let mut traces: Vec<Vec<(GethTrace, ExecutionResult<OpHaltReason>)>> = vec![];
             for (bundle_idx, bundle) in bundles.iter().enumerate() {
                 let mut bundle_block = block.clone();
                 if let Some(block_overrides) = bundle.block_override.clone() {
@@ -2111,13 +2110,8 @@ impl Backend {
                 }
                 let block_number = bundle_block.number;
 
-                let mut bundle_traces: Vec<Option<(GethTrace, ExecutionResult<OpHaltReason>)>> = vec![];
+                let mut bundle_traces: Vec<(GethTrace, ExecutionResult<OpHaltReason>)> = vec![];
                 for (tx_idx, request) in bundle.transactions.clone().into_iter().enumerate() {
-                    if request.transaction_type.unwrap() == TransactionType::Eip4844 {
-                        // skip blob tx
-                        bundle_traces.push(None);
-                        continue;
-                    }
                     let start = SystemTime::now();
                     let origin = &request.from.unwrap_or_default();
                     let nonce = &request.nonce.unwrap_or(0);
@@ -2249,7 +2243,7 @@ impl Backend {
                         Ok(GethTrace::default())
                     };
                     info!("trace call #{} in bundle #{} completed, elapsed: {:?}", tx_idx, bundle_idx, start.elapsed().unwrap());
-                    bundle_traces.push(Some((trace?, result.clone())));
+                    bundle_traces.push((trace?, result.clone()));
                 }
                 traces.push(bundle_traces);
             }
@@ -2937,6 +2931,12 @@ impl Backend {
                 ).into());
             }
             let trace_tx = trace_tx.unwrap();
+            if !(trace_tx.is_legacy() || trace_tx.is_eip1559() || trace_tx.is_eip2930() || trace_tx.is_eip7702()) {
+                return Err(TransportErrorKind::custom_str(
+                    format!("unsupported transaction type for replay: {}", trace_tx.ty()).as_str(),
+                ).into());
+            }
+
             let trace_tx_idx = trace_tx.transaction_index.unwrap() as usize;
             let block_hash = trace_tx.block_hash.unwrap();
             let block = provider.get_block_by_hash(block_hash).full().await?;
@@ -2993,13 +2993,17 @@ impl Backend {
         block_override: Option<BlockOverrides>,
         opts: DebugTraceTransactionOpts,
     ) -> Result<GethTrace, BlockchainError> {
+        let transactions = transactions.iter()
+            .filter(|tx| tx.is_legacy() || tx.is_eip1559() || tx.is_eip2930() || tx.is_eip7702())
+            .collect::<Vec<_>>();
         let provider = self.get_fork().unwrap().provider();
         let block_number = transactions[0].block_number.unwrap();
         let block_hash = transactions[0].block_hash.unwrap();
 
         let bundle = TraceCallManyBundle {
             transactions: transactions
-                .iter().map(|tx| Self::rpc_tx_to_request(tx)).collect(),
+                .iter()
+                .map(|tx| Self::rpc_tx_to_request(tx)).collect(),
             block_override,
             tracer_start_index: transactions.len() - 1,
         };
@@ -3029,12 +3033,9 @@ impl Backend {
             }
 
             for (i, trace) in results.iter().enumerate() {
-                if transactions[i].is_eip4844() {
-                    continue;
-                }
                 let tx_hash = transactions[i].inner.inner.as_envelope().unwrap().hash();
                 let receipt = receipt_map.get(tx_hash).unwrap();
-                let (_, replay_result) = trace.clone().unwrap();
+                let (_, replay_result) = trace.clone();
                 if replay_result.is_success() != receipt.inner.inner.status() {
                     return Err(BlockchainError::Internal(format!(
                         "transaction {} replay status mismatch: {}, shall be {}",
@@ -3053,7 +3054,7 @@ impl Backend {
                 }
             }
         }
-        Ok(results.last().unwrap().clone().unwrap().0)
+        Ok(results.last().unwrap().clone().0)
     }
 
     fn rpc_tx_to_request(tx: &AnyRpcTransaction) -> WithOtherFields<TransactionRequest> {
@@ -3080,31 +3081,8 @@ impl Backend {
                 ..Default::default()
             })
         } else {
-            if let Some(tx) = recovered_tx.as_unknown() {
-                WithOtherFields::from(TransactionRequest {
-                    from: Some(recovered_tx.signer()),
-                    to: tx.to().map(|addr| TxKind::Call(addr)).or(Some(TxKind::Create)),
-                    gas_price: tx.gas_price(),
-                    max_fee_per_gas: Some(tx.max_fee_per_gas()),
-                    max_priority_fee_per_gas: tx.max_priority_fee_per_gas(),
-                    max_fee_per_blob_gas: tx.max_fee_per_blob_gas(),
-                    gas: Some(tx.gas_limit()),
-                    value: Some(tx.value()),
-                    input: TransactionInput {
-                        input: Some(tx.input().clone()),
-                        data: None,
-                    },
-                    nonce: Some(tx.nonce()),
-                    transaction_type: Some(tx.ty()),
-                    authorization_list: tx.authorization_list().map(|auth_list| auth_list.to_vec()),
-                    access_list: tx.access_list().map(|list| list.clone()),
-                    ..Default::default()
-                })
-            } else {
-                panic!("unsupported transaction type for replay {}", recovered_tx.as_unknown().unwrap().hash);
-            }
+            panic!("unsupported transaction type for replay {}", recovered_tx.as_unknown().unwrap().hash);
         }
-
     }
 
     /// Traces the transaction with the js tracer
