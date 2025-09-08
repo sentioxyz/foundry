@@ -52,9 +52,9 @@ use alloy_rpc_types::{AccessList, AccessListResult, BlockId, BlockNumberOrTag as
     ForkedNetwork, Forking, Metadata, MineOptions, NodeEnvironment, NodeForkConfig, NodeInfo,
 }, request::TransactionRequest, simulate::{SimulatePayload, SimulatedBlock}, state::{AccountOverride, EvmOverrides, StateOverridesBuilder}, trace::{
     filter::TraceFilter,
-    geth::{GethDebugTracingCallOptions, GethTrace},
+    geth::GethTrace,
     parity::LocalizedTransactionTrace,
-}, txpool::{TxpoolContent, TxpoolInspect, TxpoolInspectSummary, TxpoolStatus}, TransactionIndex};
+}, txpool::{TxpoolContent, TxpoolInspect, TxpoolInspectSummary, TxpoolStatus}, TransactionIndex, BlockOverrides};
 use alloy_serde::WithOtherFields;
 use alloy_sol_types::{SolCall, SolValue, sol};
 use alloy_transport::TransportErrorKind;
@@ -88,13 +88,14 @@ use revm::{
 };
 use std::{sync::Arc, time::Duration};
 use std::ops::Not;
+use alloy_eips::BlockNumberOrTag;
 use op_revm::OpHaltReason;
 use revm::context::result::ExecutionResult;
 use tokio::{
     sync::mpsc::{UnboundedReceiver, unbounded_channel},
     try_join,
 };
-use anvil_core::types::{DebugTraceTransactionOpts, StorageRangeAtResult, TraceCallManyBundle, TraceCallManyContext};
+use anvil_core::types::{SentioDebugTraceCallOptions, SentioDebugTraceTransactionOptions, StorageRangeAtResult, TraceCallManyBundle, TraceCallManyContext};
 
 /// The client version: `anvil/v{major}.{minor}.{patch}`
 pub const CLIENT_VERSION: &str = concat!("anvil/v", env!("CARGO_PKG_VERSION"));
@@ -1748,7 +1749,7 @@ impl EthApi {
     pub async fn debug_trace_transaction(
         &self,
         tx_hash: B256,
-        opts: DebugTraceTransactionOpts,
+        opts: SentioDebugTraceTransactionOptions,
     ) -> Result<GethTrace> {
         node_info!("debug_traceTransaction");
         self.backend.debug_trace_transaction(tx_hash, opts).await
@@ -1761,10 +1762,28 @@ impl EthApi {
         &self,
         request: WithOtherFields<TransactionRequest>,
         block_number: Option<BlockId>,
-        opts: GethDebugTracingCallOptions,
+        opts: SentioDebugTraceCallOptions,
     ) -> Result<GethTrace> {
         node_info!("debug_traceCall");
-        let block_request = self.block_request(block_number).await?;
+
+        let SentioDebugTraceCallOptions {
+            mut tracing_call_options,
+            force_replay
+        } = opts;
+
+        let block_request = if force_replay && block_number.is_some() {
+            let bn = block_number.unwrap().as_u64().unwrap();
+            let block_overrides = BlockOverrides {
+                number: Some(U256::from(bn)),
+                ..tracing_call_options.block_overrides.clone().unwrap_or_default()
+            };
+            println!("{:?}", block_overrides);
+            tracing_call_options.block_overrides = Some(block_overrides);
+            self.backend.reset_block_for_replay(bn - 1).await?;
+            self.block_request(Some(BlockId::Number(BlockNumberOrTag::Number(bn - 1)))).await?
+        } else {
+            self.block_request(block_number).await?
+        };
         let fees = FeeDetails::new(
             request.gas_price,
             request.max_fee_per_gas,
@@ -1774,7 +1793,7 @@ impl EthApi {
         .or_zero_fees();
 
         let result: std::result::Result<GethTrace, BlockchainError> =
-            self.backend.call_with_tracing(request, fees, Some(block_request), opts).await;
+            self.backend.call_with_tracing(request, fees, Some(block_request), tracing_call_options).await;
         result
     }
 
@@ -1782,12 +1801,30 @@ impl EthApi {
         &self,
         bundles: Vec<TraceCallManyBundle>,
         context: TraceCallManyContext,
-        opts: GethDebugTracingCallOptions,
+        opts: SentioDebugTraceCallOptions,
     ) -> Result<Vec<Vec<GethTrace>>> {
         node_info!("debug_traceCallMany");
-        let block_request = self.block_request(context.block_number).await?;
+
+        let SentioDebugTraceCallOptions {
+            mut tracing_call_options,
+            force_replay
+        } = opts;
+
+        let block_request = if force_replay && context.block_number.is_some() {
+            let bn = context.block_number.unwrap().as_u64().unwrap();
+            let block_overrides = BlockOverrides {
+                number: Some(U256::from(bn)),
+                ..tracing_call_options.block_overrides.clone().unwrap_or_default()
+            };
+            tracing_call_options.block_overrides = Some(block_overrides);
+            self.backend.reset_block_for_replay(bn - 1).await?;
+            self.block_request(Some(BlockId::Number(BlockNumberOrTag::Number(bn - 1)))).await?
+        } else {
+            self.block_request(context.block_number).await?
+        };
+
         let result: std::result::Result<Vec<Vec<(GethTrace, ExecutionResult<OpHaltReason>)>>, BlockchainError> =
-            self.backend.call_many_with_tracing(bundles, Some(block_request), context.transaction_index, opts).await;
+            self.backend.call_many_with_tracing(bundles, Some(block_request), context.transaction_index, tracing_call_options).await;
         match result {
             Ok(traces) => Ok(traces.into_iter().map(|v|
                 v.into_iter().map(|opt| opt.0).collect()).collect()),

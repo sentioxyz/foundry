@@ -75,7 +75,7 @@ use anvil_core::eth::{
     },
     wallet::{Capabilities, DelegationCapability, WalletCapabilities},
 };
-use anvil_core::types::{DebugTraceTransactionOpts, StorageEntry, StorageMap, StorageRangeAtResult, TraceCallManyBundle};
+use anvil_core::types::{SentioDebugTraceCallOptions, SentioDebugTraceTransactionOptions, StorageEntry, StorageMap, StorageRangeAtResult, TraceCallManyBundle};
 use anvil_rpc::error::RpcError;
 use chrono::Datelike;
 use eyre::{Context, Result};
@@ -1917,8 +1917,6 @@ impl Backend {
         let gas_price = &request.gas_price.unwrap_or(0);
 
         self.with_database_at(block_request, |state, mut block| {
-            let block_number = block.number;
-
             let mut cache_db = CacheDB::new(state);
             if let Some(state_overrides) = state_overrides {
                 apply_state_overrides(state_overrides, &mut cache_db)?;
@@ -1926,6 +1924,7 @@ impl Backend {
             if let Some(block_overrides) = block_overrides {
                 cache_db.apply_block_overrides(block_overrides, &mut block);
             }
+            let block_number = block.number;
 
             if let Some(tracer) = tracer {
                 return match tracer {
@@ -2092,7 +2091,7 @@ impl Backend {
         _: TransactionIndex,
         opts: GethDebugTracingCallOptions,
     ) -> Result<Vec<Vec<(GethTrace, ExecutionResult<OpHaltReason>)>>, BlockchainError> {
-        let GethDebugTracingCallOptions { tracing_options, block_overrides: _, state_overrides } =
+        let GethDebugTracingCallOptions { tracing_options, block_overrides, state_overrides } =
             opts;
         let GethDebugTracingOptions { config, tracer, tracer_config, .. } = tracing_options;
 
@@ -2105,6 +2104,9 @@ impl Backend {
             let mut traces: Vec<Vec<(GethTrace, ExecutionResult<OpHaltReason>)>> = vec![];
             for (bundle_idx, bundle) in bundles.iter().enumerate() {
                 let mut bundle_block = block.clone();
+                if let Some(block_overrides) = block_overrides.clone() {
+                    cache_db.apply_block_overrides(block_overrides, &mut bundle_block);
+                }
                 if let Some(block_overrides) = bundle.block_override.clone() {
                     cache_db.apply_block_overrides(block_overrides, &mut bundle_block);
                 }
@@ -2902,7 +2904,7 @@ impl Backend {
     pub async fn debug_trace_transaction(
         &self,
         hash: B256,
-        opts: DebugTraceTransactionOpts,
+        opts: SentioDebugTraceTransactionOptions,
     ) -> Result<GethTrace, BlockchainError> {
         #[cfg(feature = "js-tracer")]
         if let Some(tracer_type) = opts.tracer.as_ref()
@@ -2913,14 +2915,22 @@ impl Backend {
                 .await;
         }
 
+        let SentioDebugTraceTransactionOptions {
+            sentio_tracing_call_options: SentioDebugTraceCallOptions {
+                tracing_call_options,
+                force_replay,
+            },
+            force_replay_preceding,
+            ..
+        } = opts.clone();
         if let Some(trace) = self.mined_geth_trace_transaction(
-            hash, opts.tracing_call_options.tracing_options.clone()) {
+            hash, tracing_call_options.tracing_options.clone()) {
             return trace;
         }
 
         if let Some(fork) = self.get_fork() {
-            if !opts.force_replay {
-                return Ok(fork.debug_trace_transaction(hash, opts.tracing_call_options.tracing_options).await?);
+            if !force_replay {
+                return Ok(fork.debug_trace_transaction(hash, tracing_call_options.tracing_options).await?);
             }
 
             let provider = fork.provider();
@@ -2957,19 +2967,15 @@ impl Backend {
                 block_hash: None,
             };
 
-            info!("resetting block number to {} for replay", block.number() - 1);
-            let rpc_url = self.node_config.read().await.eth_rpc_url.clone().unwrap();
-            self.reset_block_number(rpc_url, block.number() - 1).await?;
+            self.reset_block_for_replay(block.number() - 1).await?;
 
-            if !opts.force_replay_preceding {
+            if !force_replay_preceding {
                 // try replay only 1 tx first
                 let ret = self.replay_bundle_last_tx(
                     [trace_tx].as_slice(),
                     Some(block_overrides.clone()),
-                    DebugTraceTransactionOpts {
-                        force_replay_validation: true,
-                        ..opts.clone()
-                    }
+                    opts.sentio_tracing_call_options.tracing_call_options.clone(),
+                    opts.force_replay_validation
                 ).await;
                 match &ret {
                     Ok(_) => return ret,
@@ -2982,16 +2988,33 @@ impl Backend {
                     return Err(BlockchainError::Internal("cannot retrieve block transactions".to_string()))
                 }
             };
-            return self.replay_bundle_last_tx(&txs[..trace_tx_idx+1], Some(block_overrides), opts).await;
+            return self.replay_bundle_last_tx(
+                &txs[..trace_tx_idx+1],
+                Some(block_overrides),
+                opts.sentio_tracing_call_options.tracing_call_options.clone(),
+                opts.force_replay_validation
+            ).await;
         }
         Err(BlockchainError::Internal("no fork".to_string()))
+    }
+
+    pub(crate) async fn reset_block_for_replay(&self, block_number: u64) -> Result<(), BlockchainError> {
+        info!("resetting block number to {} for replay", block_number);
+        if self.env.read().evm_env.block_env.number != block_number {
+            return self.reset_fork(Forking {
+                json_rpc_url: None,
+                block_number: Some(block_number),
+            }).await;
+        }
+        Ok(())
     }
 
     async fn replay_bundle_last_tx(
         &self,
         transactions: &[AnyRpcTransaction],
         block_override: Option<BlockOverrides>,
-        opts: DebugTraceTransactionOpts,
+        tracing_call_options: GethDebugTracingCallOptions,
+        force_replay_validation: bool
     ) -> Result<GethTrace, BlockchainError> {
         let transactions = transactions.iter()
             .filter(|tx| tx.is_legacy() || tx.is_eip1559() || tx.is_eip2930() || tx.is_eip7702())
@@ -3011,10 +3034,10 @@ impl Backend {
             vec![bundle],
             Some(BlockRequest::Number(block_number - 1)),
             TransactionIndex::All,
-            opts.tracing_call_options
+            tracing_call_options
         ).await?[0];
 
-        if opts.force_replay_validation {
+        if force_replay_validation {
             info!("validating {} replayed transaction results against receipts", transactions.len());
             let mut receipt_map: std::collections::HashMap<TxHash, AnyTransactionReceipt> = std::collections::HashMap::new();
             if transactions.len() == 1 {

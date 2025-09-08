@@ -1,14 +1,11 @@
+use crate::types::{SentioDebugTraceCallOptions, SentioDebugTraceTransactionOptions, TraceCallManyBundle, TraceCallManyContext};
 use crate::{eth::subscription::SubscriptionId, types::ReorgOptions};
-use alloy_primitives::{Address, B64, B256, Bytes, TxHash, U256};
-use alloy_rpc_types::{BlockId, BlockNumberOrTag as BlockNumber, BlockOverrides, Filter, Index, anvil::{Forking, MineOptions}, pubsub::{Params as SubscriptionParams, SubscriptionKind}, request::TransactionRequest, simulate::SimulatePayload, state::StateOverride, trace::{
-    filter::TraceFilter,
-    geth::{GethDebugTracingCallOptions},
-}, TransactionIndex};
+use alloy_primitives::{Address, Bytes, TxHash, B256, B64, U256};
+use alloy_rpc_types::{anvil::{Forking, MineOptions}, pubsub::{Params as SubscriptionParams, SubscriptionKind}, request::TransactionRequest, simulate::SimulatePayload, state::StateOverride, trace::filter::TraceFilter, BlockId, BlockNumberOrTag as BlockNumber, BlockOverrides, Filter, Index, TransactionIndex};
 use alloy_serde::WithOtherFields;
 use foundry_common::serde_helpers::{
     deserialize_number, deserialize_number_opt, deserialize_number_seq,
 };
-use crate::types::{DebugTraceTransactionOpts, TraceCallManyBundle, TraceCallManyContext};
 
 pub mod block;
 pub mod subscription;
@@ -266,21 +263,21 @@ pub enum EthRequest {
 
     /// geth's `debug_traceTransaction`  endpoint
     #[serde(rename = "debug_traceTransaction")]
-    DebugTraceTransaction(B256, #[serde(default)] DebugTraceTransactionOpts),
+    DebugTraceTransaction(B256, #[serde(default)] SentioDebugTraceTransactionOptions),
 
     /// geth's `debug_traceCall`  endpoint
     #[serde(rename = "debug_traceCall")]
     DebugTraceCall(
         WithOtherFields<TransactionRequest>,
         #[serde(default)] Option<BlockId>,
-        #[serde(default)] GethDebugTracingCallOptions,
+        #[serde(default)] SentioDebugTraceCallOptions,
     ),
 
     #[serde(rename = "debug_traceCallMany")]
     DebugTraceCallMany(
         Vec<TraceCallManyBundle>,
         TraceCallManyContext,
-        #[serde(default)] GethDebugTracingCallOptions,
+        #[serde(default)] SentioDebugTraceCallOptions,
     ),
 
     /// reth's `debug_codeByHash` endpoint

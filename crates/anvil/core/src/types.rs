@@ -58,13 +58,26 @@ pub struct StorageEntry {
 
 #[derive(Clone, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
-pub struct DebugTraceTransactionOpts {
+pub struct SentioDebugTraceCallOptions {
     #[serde(flatten)]
     pub tracing_call_options: GethDebugTracingCallOptions,
+
+    /// fetch states from the underlying node and execute on anvil
     #[serde(default)]
     pub force_replay: bool,
+}
+
+#[derive(Clone, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct SentioDebugTraceTransactionOptions {
+    #[serde(flatten)]
+    pub sentio_tracing_call_options: SentioDebugTraceCallOptions,
+
+    /// before replaying a transaction, replay all preceding transactions in the block to apply state changes
     #[serde(default)]
     pub force_replay_preceding: bool,
+
+    /// ensure transaction execution matches the truth
     #[serde(default)]
     pub force_replay_validation: bool,
 }
