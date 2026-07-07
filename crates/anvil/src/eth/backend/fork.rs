@@ -534,6 +534,26 @@ impl ClientFork {
         self.fetch_full_block(block_number).await
     }
 
+    /// Live-queries the fork upstream for its current head block number.
+    ///
+    /// Unlike [`Self::block_number`] (which returns the pinned fork height), this reflects the
+    /// real chain head. Used by sentio tracer pass-through.
+    pub async fn latest_block_number(&self) -> Result<u64, TransportError> {
+        self.provider().get_block_number().await
+    }
+
+    /// Live-queries the fork upstream for a block by tag (e.g. `latest`), bypassing the pinned
+    /// fork height. The result is intentionally not cached, since head tags resolve to a moving
+    /// target. Used by sentio tracer pass-through.
+    pub async fn block_by_tag(
+        &self,
+        tag: BlockNumber,
+        full: bool,
+    ) -> Result<Option<AnyRpcBlock>, TransportError> {
+        let req = self.provider().get_block(BlockId::Number(tag));
+        if full { req.full().await } else { req.await }
+    }
+
     async fn fetch_full_block(
         &self,
         block_id: impl Into<BlockId>,
