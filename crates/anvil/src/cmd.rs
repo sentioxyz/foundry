@@ -193,9 +193,15 @@ pub struct NodeArgs {
     #[command(flatten)]
     pub server_config: ServerConfig,
 
-    /// Path to the cache directory where states are stored.    
+    /// Path to the cache directory where states are stored.
     #[arg(long, value_name = "PATH")]
     pub cache_path: Option<PathBuf>,
+
+    /// Run as a sentio tracer: forward `eth_blockNumber` and `eth_getBlockByNumber` head-tag
+    /// queries to the fork upstream instead of reporting the pinned fork height, so endpoint
+    /// health checks see the real chain head.
+    #[arg(long)]
+    pub sentio_tracer: bool,
 }
 
 #[cfg(windows)]
@@ -284,6 +290,7 @@ impl NodeArgs {
             .with_disable_pool_balance_checks(self.evm.disable_pool_balance_checks)
             .with_slots_in_an_epoch(self.slots_in_an_epoch)
             .with_memory_limit(self.evm.memory_limit)
+            .with_sentio_tracer(self.sentio_tracer)
             .with_cache_path(self.cache_path))
     }
 

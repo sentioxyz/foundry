@@ -202,6 +202,11 @@ pub struct NodeConfig {
     pub silent: bool,
     /// The path where states are cached.
     pub cache_path: Option<PathBuf>,
+    /// Run as a sentio tracer: this node holds no chain state of its own and forwards state reads
+    /// to the fork upstream, so `eth_blockNumber` and `eth_getBlockByNumber` for the head tags are
+    /// passed through to the fork RPC instead of reporting the pinned fork height. This lets
+    /// endpoint health checks (which poll `eth_getBlockByNumber(latest)`) see the real chain head.
+    pub sentio_tracer: bool,
 }
 
 impl NodeConfig {
@@ -497,6 +502,7 @@ impl Default for NodeConfig {
             celo: false,
             silent: false,
             cache_path: None,
+            sentio_tracer: false,
         }
     }
 }
@@ -1047,6 +1053,14 @@ impl NodeConfig {
     #[must_use]
     pub fn with_cache_path(mut self, cache_path: Option<PathBuf>) -> Self {
         self.cache_path = cache_path;
+        self
+    }
+
+    /// Sets whether this node runs as a sentio tracer (passes chain-head queries through to the
+    /// fork upstream).
+    #[must_use]
+    pub fn with_sentio_tracer(mut self, sentio_tracer: bool) -> Self {
+        self.sentio_tracer = sentio_tracer;
         self
     }
 
