@@ -116,6 +116,10 @@ pub struct EthApi {
     net_listening: bool,
     /// The instance ID. Changes on every reset.
     instance_id: Arc<RwLock<B256>>,
+    /// When true, this node runs as a sentio tracer and forwards chain-head queries
+    /// (`eth_blockNumber`, `eth_getBlockByNumber` head tags) to the fork upstream instead of
+    /// reporting the pinned fork height.
+    sentio_tracer: bool,
 }
 
 impl EthApi {
@@ -131,6 +135,7 @@ impl EthApi {
         logger: LoggingManager,
         filters: Filters,
         transactions_order: TransactionOrder,
+        sentio_tracer: bool,
     ) -> Self {
         Self {
             pool,
@@ -145,6 +150,7 @@ impl EthApi {
             net_listening: true,
             transaction_order: Arc::new(RwLock::new(transactions_order)),
             instance_id: Arc::new(RwLock::new(B256::random())),
+            sentio_tracer,
         }
     }
 
@@ -175,7 +181,7 @@ impl EthApi {
             }
             EthRequest::EthBlobBaseFee(_) => self.blob_base_fee().to_rpc_result(),
             EthRequest::EthAccounts(_) => self.accounts().to_rpc_result(),
-            EthRequest::EthBlockNumber(_) => self.block_number().to_rpc_result(),
+            EthRequest::EthBlockNumber(_) => self.block_number().await.to_rpc_result(),
             EthRequest::EthGetStorageAt(addr, slot, block) => {
                 self.storage_at(addr, slot, block).await.to_rpc_result()
             }
@@ -649,8 +655,15 @@ impl EthApi {
     /// Returns the number of most recent block.
     ///
     /// Handler for ETH RPC call: `eth_blockNumber`
-    pub fn block_number(&self) -> Result<U256> {
+    pub async fn block_number(&self) -> Result<U256> {
         node_info!("eth_blockNumber");
+        // In sentio tracer mode this node holds no chain state of its own; report the fork
+        // upstream's live head so endpoint health checks don't see a frozen fork block.
+        if self.sentio_tracer {
+            if let Some(fork) = self.get_fork() {
+                return Ok(U256::from(fork.latest_block_number().await?));
+            }
+        }
         Ok(U256::from(self.backend.best_number()))
     }
 
@@ -768,6 +781,16 @@ impl EthApi {
         if number == BlockNumber::Pending {
             return Ok(Some(self.pending_block().await));
         }
+        // Sentio tracer: forward head-tag lookups (`latest`/`safe`/`finalized`) to the fork
+        // upstream so they reflect the real chain head instead of the pinned fork block. This is
+        // what endpoint health checks poll (`eth_getBlockByNumber(latest)`).
+        if self.sentio_tracer
+            && matches!(number, BlockNumber::Latest | BlockNumber::Finalized | BlockNumber::Safe)
+        {
+            if let Some(fork) = self.get_fork() {
+                return Ok(fork.block_by_tag(number, false).await?);
+            }
+        }
 
         self.backend.block_by_number(number).await
     }
@@ -782,6 +805,14 @@ impl EthApi {
         node_info!("eth_getBlockByNumber");
         if number == BlockNumber::Pending {
             return Ok(self.pending_block_full().await);
+        }
+        // See `block_by_number`: sentio tracer forwards head-tag lookups to the fork upstream.
+        if self.sentio_tracer
+            && matches!(number, BlockNumber::Latest | BlockNumber::Finalized | BlockNumber::Safe)
+        {
+            if let Some(fork) = self.get_fork() {
+                return Ok(fork.block_by_tag(number, true).await?);
+            }
         }
         self.backend.block_by_number_full(number).await
     }

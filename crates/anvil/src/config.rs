@@ -157,6 +157,12 @@ pub struct NodeConfig {
     pub ipc_path: Option<Option<String>>,
     /// Enable transaction/call steps tracing for debug calls returning geth-style traces
     pub enable_steps_tracing: bool,
+    /// Run as a sentio tracer: this node holds no chain state of its own and forwards state
+    /// reads to the fork upstream, so `eth_blockNumber` and `eth_getBlockByNumber` for the head
+    /// tags are passed through to the fork RPC instead of reporting the pinned fork height. This
+    /// lets endpoint health checks (which poll `eth_getBlockByNumber(latest)`) see the real chain
+    /// head rather than a frozen block.
+    pub sentio_tracer: bool,
     /// Enable printing of `console.log` invocations.
     pub print_logs: bool,
     /// Enable auto impersonation of accounts on startup
@@ -413,6 +419,7 @@ impl Default for NodeConfig {
             blob_excess_gas_and_price: None,
             enable_tracing: true,
             enable_steps_tracing: false,
+            sentio_tracer: false,
             print_logs: true,
             enable_auto_impersonate: false,
             no_storage_caching: false,
@@ -836,6 +843,14 @@ impl NodeConfig {
     #[must_use]
     pub fn with_steps_tracing(mut self, enable_steps_tracing: bool) -> Self {
         self.enable_steps_tracing = enable_steps_tracing;
+        self
+    }
+
+    /// Sets whether this node runs as a sentio tracer (passes chain-head queries through to the
+    /// fork upstream).
+    #[must_use]
+    pub fn with_sentio_tracer(mut self, sentio_tracer: bool) -> Self {
+        self.sentio_tracer = sentio_tracer;
         self
     }
 

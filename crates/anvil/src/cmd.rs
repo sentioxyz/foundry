@@ -263,6 +263,7 @@ impl NodeArgs {
             .with_transaction_order(self.order)
             .with_genesis(self.init)
             .with_steps_tracing(self.evm_opts.steps_tracing)
+            .with_sentio_tracer(self.evm_opts.sentio_tracer)
             .with_print_logs(!self.evm_opts.disable_console_log)
             .with_auto_impersonate(self.evm_opts.auto_impersonate)
             .with_ipc(self.ipc)
@@ -554,6 +555,12 @@ pub struct AnvilEvmArgs {
     /// Enable steps tracing used for debug calls returning geth-style traces
     #[arg(long, visible_alias = "tracing")]
     pub steps_tracing: bool,
+
+    /// Run as a sentio tracer: forward `eth_blockNumber` and `eth_getBlockByNumber` head-tag
+    /// queries to the fork upstream instead of reporting the pinned fork height, so endpoint
+    /// health checks see the real chain head.
+    #[arg(long)]
+    pub sentio_tracer: bool,
 
     /// Disable printing of `console.log` invocations to stdout.
     #[arg(long, visible_alias = "no-console-log")]
